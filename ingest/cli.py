@@ -11,7 +11,13 @@ from app.config import MissingSecretError, Settings, get_settings
 from app.db import make_engine
 from ingest.embeddings import build_ingest_embeddings
 from ingest.fetch import FetchError, discover_versions, sync_repo
-from ingest.index import build_record_manager, build_vector_store, index_chunks
+from ingest.index import (
+    DimensionMismatchError,
+    build_record_manager,
+    build_vector_store,
+    check_dimensions,
+    index_chunks,
+)
 from ingest.load import load_documents
 from ingest.split import split_documents
 
@@ -63,6 +69,7 @@ def run_ingest(
     embeddings = build_ingest_embeddings(settings, inner_embeddings, on_batch)
     engine = make_engine(settings.database_url)
     try:
+        check_dimensions(engine, settings.embed_dimensions)
         result = index_chunks(
             chunks,
             build_record_manager(engine),
@@ -105,7 +112,7 @@ def format_summary(summary: IngestSummary) -> str:
 def main() -> int:
     try:
         summary = run_ingest(get_settings())
-    except (FetchError, MissingSecretError) as exc:
+    except (FetchError, MissingSecretError, DimensionMismatchError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     print(format_summary(summary))

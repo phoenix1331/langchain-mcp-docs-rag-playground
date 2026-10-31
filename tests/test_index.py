@@ -1,4 +1,5 @@
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.documents import Document
@@ -8,8 +9,16 @@ from langchain_core.vectorstores import InMemoryVectorStore
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
+from app.config import get_settings
 from app.db import make_engine
-from ingest.index import build_record_manager, build_vector_store, index_chunks
+from ingest.index import (
+    DimensionMismatchError,
+    build_record_manager,
+    build_vector_store,
+    check_dimensions,
+    index_chunks,
+    stored_dimensions,
+)
 
 
 def chunk(content: str, source: str = "docs/a.mdx", version: str = "2026-07-28") -> Document:
@@ -74,8 +83,12 @@ def test_pgvector_round_trip_with_version_filter() -> None:
         engine.dispose()
         pytest.skip("database not reachable")
 
+    # PGVector shares one embedding table across collections, so the test must use the
+    # real dimension or it would create that table at the wrong size.
+    dims = get_settings().embed_dimensions
     try:
-        store = build_vector_store(engine, DeterministicFakeEmbedding(size=8), 8, collection)
+        check_dimensions(engine, dims)
+        store = build_vector_store(engine, DeterministicFakeEmbedding(size=dims), dims, collection)
         manager = build_record_manager(engine, collection)
         docs = [
             chunk("sampling requests", version="2025-11-25"),
@@ -99,3 +112,25 @@ def test_pgvector_round_trip_with_version_filter() -> None:
                 {"ns": f"pgvector/{collection}"},
             )
         engine.dispose()
+
+
+def fake_engine(typmod: int | None) -> MagicMock:
+    engine = MagicMock()
+    conn = engine.connect.return_value.__enter__.return_value
+    conn.execute.return_value.scalar_one_or_none.return_value = typmod
+    return engine
+
+
+@pytest.mark.parametrize(("typmod", "expected"), [(1024, 1024), (None, None), (-1, None)])
+def test_stored_dimensions(typmod: int | None, expected: int | None) -> None:
+    assert stored_dimensions(fake_engine(typmod)) == expected
+
+
+def test_check_dimensions_passes_when_matching_or_missing() -> None:
+    check_dimensions(fake_engine(1024), 1024)
+    check_dimensions(fake_engine(None), 1024)
+
+
+def test_check_dimensions_rejects_mismatch() -> None:
+    with pytest.raises(DimensionMismatchError, match=r"vector\(8\) but EMBED_DIMENSIONS is 1024"):
+        check_dimensions(fake_engine(8), 1024)

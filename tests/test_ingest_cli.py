@@ -11,6 +11,7 @@ from app.config import MissingSecretError, Settings
 from ingest import cli
 from ingest.cli import IngestSummary, format_summary, run_ingest
 from ingest.fetch import FetchError
+from ingest.index import DimensionMismatchError
 
 PAGE = "---\ntitle: Lifecycle\n---\n## Init\n\nThe client sends initialize first.\n"
 
@@ -45,6 +46,7 @@ def fake_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settings:
     monkeypatch.setattr(cli, "sync_repo", lambda url, dest: "abc123def4567890")
     monkeypatch.setattr(cli, "make_engine", lambda url: engine)
     monkeypatch.setattr(cli, "build_record_manager", lambda e: manager)
+    monkeypatch.setattr(cli, "check_dimensions", lambda e, dims: None)
     monkeypatch.setattr(cli, "build_vector_store", lambda e, emb, dims: InMemoryVectorStore(emb))
     return make_settings(tmp_path)
 
@@ -98,7 +100,12 @@ def test_main_prints_summary(
 
 
 @pytest.mark.parametrize(
-    "error", [FetchError("git clone failed: nope"), MissingSecretError("VOYAGE_API_KEY is not set")]
+    "error",
+    [
+        FetchError("git clone failed: nope"),
+        MissingSecretError("VOYAGE_API_KEY is not set"),
+        DimensionMismatchError("vector(8) but EMBED_DIMENSIONS is 1024"),
+    ],
 )
 def test_main_reports_known_errors(
     monkeypatch: pytest.MonkeyPatch,

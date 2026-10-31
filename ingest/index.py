@@ -8,11 +8,39 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.indexing import IndexingResult, RecordManager, index
 from langchain_core.vectorstores import VectorStore
 from langchain_postgres import PGVector
-from sqlalchemy import Engine
+from sqlalchemy import Engine, text
 
 COLLECTION = "mcp_docs"
 SOURCE_ID_KEY = "source_path"
 BATCH_SIZE = 100
+
+
+EMBEDDING_TABLE = "langchain_pg_embedding"
+
+
+class DimensionMismatchError(RuntimeError):
+    """The shared embedding column was created with a different vector size."""
+
+
+def stored_dimensions(engine: Engine) -> int | None:
+    """Vector size of the shared embedding column, or None before the table exists."""
+    query = text(
+        "SELECT atttypmod FROM pg_attribute "
+        "WHERE attrelid = to_regclass(:table) AND attname = 'embedding'"
+    )
+    with engine.connect() as conn:
+        typmod = conn.execute(query, {"table": EMBEDDING_TABLE}).scalar_one_or_none()
+    return typmod if typmod and typmod > 0 else None
+
+
+def check_dimensions(engine: Engine, expected: int) -> None:
+    """Fail early: PGVector shares one table across collections and never alters it."""
+    actual = stored_dimensions(engine)
+    if actual is not None and actual != expected:
+        raise DimensionMismatchError(
+            f"{EMBEDDING_TABLE}.embedding is vector({actual}) but EMBED_DIMENSIONS is "
+            f"{expected}. Drop the langchain_pg_* and upsertion_record tables to rebuild."
+        )
 
 
 def build_vector_store(
