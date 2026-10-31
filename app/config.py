@@ -30,7 +30,13 @@ class Settings(BaseSettings):
     router_model: str
     answer_model: str
     embed_model: str
+    embed_dimensions: int = Field(default=1024, ge=1)
     rerank_model: str
+
+    # Embedding rate limits for ingestion (0 = unlimited) and request size in tokens.
+    embed_rpm: int = Field(default=0, ge=0)
+    embed_tpm: int = Field(default=0, ge=0)
+    embed_batch_tokens: int = Field(default=100_000, ge=1)
 
     top_k: int = Field(default=20, ge=1)
     rerank_top_n: int = Field(default=6, ge=1)
