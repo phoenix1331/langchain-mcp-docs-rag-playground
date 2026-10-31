@@ -4,6 +4,7 @@ import pytest
 
 from ingest.fetch import SpecVersions
 from ingest.load import iter_source_files, load_document, load_documents
+from ingest.navigation import Navigation
 
 VERSIONS = SpecVersions(versions=("2025-06-18", "2026-07-28"))
 
@@ -30,6 +31,7 @@ def repo(tmp_path: Path) -> Path:
     ]:
         write(tmp_path, rel)
     write(tmp_path, "docs/specification/2026-07-28/notes.md")
+    write(tmp_path, "docs/docs.json", "{}")
     return tmp_path
 
 
@@ -62,13 +64,30 @@ def test_load_document_sets_metadata(tmp_path: Path) -> None:
 
     path = Path("docs/specification/2026-07-28/basic/index.mdx")
 
-    doc = load_document(tmp_path, path, "2026-07-28")
+    page = "specification/2026-07-28/basic/index"
+    navigation = Navigation.from_config(
+        {
+            "navigation": {
+                "tabs": [
+                    {
+                        "tab": "Specification",
+                        "versions": [{"pages": [{"group": "Base Protocol", "pages": [page]}]}],
+                    }
+                ]
+            }
+        }
+    )
+
+    doc = load_document(tmp_path, path, "2026-07-28", navigation)
 
     assert doc.metadata == {
         "source_path": "docs/specification/2026-07-28/basic/index.mdx",
         "spec_version": "2026-07-28",
         "page_title": "Overview",
         "description": "Basics",
+        "source_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic",
+        "nav_tab": "Specification",
+        "nav_sections": ["Base Protocol"],
     }
     assert "**Note:** Hi" in doc.page_content
 
@@ -76,7 +95,9 @@ def test_load_document_sets_metadata(tmp_path: Path) -> None:
 def test_load_document_falls_back_to_file_name(tmp_path: Path) -> None:
     write(tmp_path, "docs/extensions/apps.mdx", "No frontmatter\n")
 
-    doc = load_document(tmp_path, Path("docs/extensions/apps.mdx"), "unversioned")
+    doc = load_document(
+        tmp_path, Path("docs/extensions/apps.mdx"), "unversioned", Navigation.from_config({})
+    )
 
     assert doc.metadata["page_title"] == "apps"
     assert doc.metadata["description"] == ""
