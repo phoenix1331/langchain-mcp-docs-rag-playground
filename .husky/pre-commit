@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+# Linting and formatting
+echo "running ruff..."
+if ! uv run ruff check .; then
+  echo "error: ruff found linting issues. run make format to fix."
+  exit 1
+fi
+if ! uv run ruff format --check .; then
+  echo "error: ruff found formatting issues. run make format to fix."
+  exit 1
+fi
+
+# Security audit via osv-scanner CLI
+if ! command -v osv-scanner > /dev/null 2>&1; then
+  echo "error: osv-scanner not found. install it: https://github.com/google/osv-scanner"
+  exit 1
+fi
+
+# osv-scanner 1.x cannot parse uv.lock, so scan an exported requirements file instead
+echo "running osv-scanner audit..."
+AUDIT_DIR=$(mktemp -d)
+trap 'rm -rf "$AUDIT_DIR"' EXIT
+if ! uv export --frozen --all-groups --no-emit-project --no-hashes -q -o "$AUDIT_DIR/requirements.txt"; then
+  echo "error: could not export uv.lock. run uv lock and try again."
+  exit 1
+fi
+if ! osv-scanner --lockfile="requirements.txt:$AUDIT_DIR/requirements.txt"; then
+  echo "error: vulnerable packages detected. review the osv-scanner output above."
+  exit 1
+fi
