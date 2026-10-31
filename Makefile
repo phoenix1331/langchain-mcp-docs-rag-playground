@@ -6,7 +6,7 @@ help: ## List available targets
 
 install: ## Install Python dependencies and git hooks
 	@uv sync
-	@if [ -f package.json ]; then npm install --silent; fi
+	@git config core.hooksPath .githooks
 
 test: ## Run the test suite
 	@uv run pytest

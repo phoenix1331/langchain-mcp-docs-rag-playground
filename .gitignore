@@ -16,6 +16,3 @@ dist/
 
 # MCP repo clone and local indexes
 .cache/
-
-# Node (Husky)
-node_modules/

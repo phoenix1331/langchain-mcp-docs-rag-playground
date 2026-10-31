@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 MSG_FILE="$1"
 MSG=$(cat "$MSG_FILE")
