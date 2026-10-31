@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install test coverage lint format
+.PHONY: help install db-setup db-check test coverage lint format
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -7,6 +7,12 @@ help: ## List available targets
 install: ## Install Python dependencies and git hooks
 	@uv sync
 	@git config core.hooksPath .githooks
+
+db-setup: ## Install pgvector and create the database (sudo on Linux, Homebrew on macOS; safe to re-run)
+	@if [ "$$(uname -s)" = "Darwin" ]; then sh scripts/setup-postgres.sh; else sudo sh scripts/setup-postgres.sh; fi
+
+db-check: ## Check the database connection and pgvector
+	@uv run db-check
 
 test: ## Run the test suite
 	@uv run pytest

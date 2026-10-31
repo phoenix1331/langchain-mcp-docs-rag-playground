@@ -5,7 +5,9 @@ description = "Agentic RAG over the Model Context Protocol docs, built with Lang
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.2",
+    "sqlalchemy>=2.1.6",
 ]
 
 [dependency-groups]
@@ -14,6 +16,9 @@ dev = [
     "pytest-cov>=7.1.0",
     "ruff>=0.17.3",
 ]
+
+[project.scripts]
+db-check = "app.db:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -32,6 +37,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+markers = ["db: needs the live Postgres database (skipped when unreachable)"]
 
 [tool.coverage.run]
 source = ["app", "ingest"]
