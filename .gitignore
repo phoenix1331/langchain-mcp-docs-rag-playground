@@ -1,0 +1,21 @@
+# Planning files
+.claude/
+
+# Environment
+.env
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+
+# MCP repo clone and local indexes
+.cache/
+
+# Node (Husky)
+node_modules/
