@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     relevance_threshold: int = Field(default=2, ge=1)
     max_rewrites: int = Field(default=2, ge=0)
 
+    chunk_size: int = Field(default=1500, ge=200)
+    chunk_overlap: int = Field(default=150, ge=0)
+
     mcp_repo_url: str = "https://github.com/modelcontextprotocol/modelcontextprotocol"
     cache_dir: Path = PROJECT_ROOT / ".cache"
 
