@@ -38,6 +38,7 @@ db-check = "app.db:main"
 ingest = "ingest.cli:main"
 query = "app.retrieval.cli:main"
 ask = "app.graph.cli:main"
+evals = "evals.run:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     embed_model: str = Field(pattern=MODEL_SPEC)
     embed_dimensions: int = Field(default=1024, ge=1)
     rerank_model: str = Field(pattern=MODEL_SPEC)
+    judge_model: str | None = Field(default=None, pattern=MODEL_SPEC)  # falls back to answer_model
+
+    @field_validator("judge_model", mode="before")
+    @classmethod
+    def blank_is_unset(cls, value: object) -> object:
+        """`JUDGE_MODEL=` in `.env` means "use the answer model", not an invalid spec."""
+        return None if value == "" else value
 
     # Embedding rate limits for ingestion (0 = unlimited) and request size in tokens.
     embed_rpm: int = Field(default=0, ge=0)
@@ -46,6 +53,9 @@ class Settings(BaseSettings):
     rerank_top_n: int = Field(default=6, ge=1)
     relevance_threshold: int = Field(default=2, ge=1)
     max_rewrites: int = Field(default=2, ge=0)
+
+    # Seconds between eval questions; free-tier quotas need ~40 (Voyage allows 3 RPM).
+    eval_pause_seconds: float = Field(default=0, ge=0)
 
     chunk_size: int = Field(default=1500, ge=200)
     chunk_overlap: int = Field(default=150, ge=0)
