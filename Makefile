@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help install db-setup db-check ingest test coverage lint format
+.PHONY: help install db-setup db-check ingest query test coverage lint format
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -16,6 +16,9 @@ db-check: ## Check the database connection and pgvector
 
 ingest: ## Fetch the MCP docs and index new or changed chunks
 	@uv run ingest
+
+query: ## Inspect retrieval: make query Q="your question" [ARGS="--version all --mode bm25 --no-rerank"]
+	@uv run query $(ARGS) "$(Q)"
 
 test: ## Run the test suite
 	@uv run pytest

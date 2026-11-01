@@ -27,6 +27,7 @@ dev = [
 [project.scripts]
 db-check = "app.db:main"
 ingest = "ingest.cli:main"
+query = "app.retrieval.cli:main"
 
 [build-system]
 requires = ["hatchling"]
