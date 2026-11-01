@@ -13,6 +13,7 @@ Search resources and the compiled graph are built once at startup. Run with `mak
 
 import html
 import logging
+import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -29,6 +30,7 @@ from markdown_it import MarkdownIt
 from app.config import get_settings
 from app.db import make_engine
 from app.graph.build import build_question_graph
+from app.graph.nodes import CITATION_PATTERN
 from app.graph.progress import describe_result, describe_start
 from app.retrieval.scope import ALL
 from app.retrieval.search import Search
@@ -43,11 +45,15 @@ class QuestionGraph(Protocol):
     def astream(self, inputs: dict[str, str], stream_mode: list[str]) -> AsyncIterator[Any]: ...
 
 
+DEFAULT_REPO_URL = "https://github.com/modelcontextprotocol/modelcontextprotocol"
+
+
 @dataclass
 class Services:
     versions: SpecVersions
     graph: QuestionGraph
     close: Callable[[], None] = field(default=lambda: None)
+    repo_url: str = DEFAULT_REPO_URL  # source files link to `<repo_url>/blob/main/<path>`
 
 
 def build_services() -> Services:
@@ -58,6 +64,7 @@ def build_services() -> Services:
         versions=search.keyword.versions,
         graph=build_question_graph(settings, search),
         close=engine.dispose,
+        repo_url=settings.mcp_repo_url.removesuffix(".git"),
     )
 
 
@@ -67,6 +74,28 @@ _markdown = MarkdownIt("commonmark", {"html": False}).enable("table")
 
 def render_markdown(text: str) -> str:
     return _markdown.render(text)
+
+
+# Code spans and blocks are left alone: `[1]` there is code, not a citation.
+_CODE = re.compile(r"(<pre>.*?</pre>|<code>.*?</code>)", re.S)
+
+
+def link_citations(rendered: str, numbers: list[int]) -> str:
+    """Turn `[n]`, `[n][m]` and `[n, m]` into links to `#source-n` for cited numbers."""
+    known = set(numbers)
+
+    def link(match: re.Match[str]) -> str:
+        parts = [int(n) for n in match.group(1).split(",")]
+        if not all(n in known for n in parts):
+            return match.group(0)
+        links = ", ".join(f'<a class="cite" href="#source-{n}">{n}</a>' for n in parts)
+        return f"[{links}]"
+
+    pieces = _CODE.split(rendered)
+    return "".join(
+        piece if index % 2 else CITATION_PATTERN.sub(link, piece)
+        for index, piece in enumerate(pieces)
+    )
 
 
 def sse(event: str, data: str) -> str:
@@ -101,6 +130,7 @@ def create_app(services_factory: Callable[[], Services] = build_services) -> Fas
     app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
     templates = Jinja2Templates(directory=APP_DIR / "templates")
     templates.env.filters["markdown"] = render_markdown
+    templates.env.filters["link_citations"] = link_citations
 
     def error(request: Request, message: str, status_code: int) -> HTMLResponse:
         return templates.TemplateResponse(
@@ -179,6 +209,9 @@ def create_app(services_factory: Callable[[], Services] = build_services) -> Fas
             trace = final.get("trace", [])
             context = {
                 "result": final,
+                "citations": final.get("citations", []),
+                "declined": bool(trace) and trace[-1]["step"] == "decline",
+                "source_base": f"{services.repo_url}/blob/main/",
                 "seconds": sum(step["ms"] for step in trace) / 1000,
                 "tokens": sum(step["tokens"] for step in trace),
                 "steps": len(trace),

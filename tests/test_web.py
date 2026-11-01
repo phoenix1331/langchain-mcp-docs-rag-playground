@@ -7,12 +7,29 @@ from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessageChunk
 
 from app import main
-from app.main import MAX_QUESTION_CHARS, Services, create_app, render_markdown, sse
+from app.main import (
+    DEFAULT_REPO_URL,
+    MAX_QUESTION_CHARS,
+    Services,
+    create_app,
+    link_citations,
+    render_markdown,
+    sse,
+)
 from ingest.fetch import SpecVersions
 
 VERSIONS = SpecVersions(("2025-11-25", "2026-07-28"))
+CITATION = {
+    "number": 1,
+    "chunk_id": "a",
+    "heading_path": "Base Protocol › Authorization › Refresh Tokens",
+    "spec_version": "2026-07-28",
+    "source_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization",
+    "source_path": "docs/specification/2026-07-28/basic/authorization/index.mdx",
+}
 RESULT = {
     "answer": "Use the **refresh grant** [1].\n\n<script>alert(1)</script>",
+    "citations": [CITATION],
     "trace": [
         {"step": "route", "summary": "", "ms": 900, "tokens": 200},
         {"step": "answer", "summary": "", "ms": 1600, "tokens": 1000},
@@ -148,7 +165,12 @@ def test_stream_sends_stages_tokens_then_the_rendered_answer(
     ]
     assert events[6][1] == '<li class="stage-done">done</li>'
     done = events[-1][1]
-    assert "<strong>refresh grant</strong> [1]" in done
+    assert '<strong>refresh grant</strong> [<a class="cite" href="#source-1">1</a>]' in done
+    assert '<h2 id="sources-heading">Sources</h2>' in done
+    assert '<li id="source-1">' in done
+    assert "Base Protocol › Authorization › Refresh Tokens" in done
+    assert f'href="{CITATION["source_url"]}"' in done
+    assert f'href="{DEFAULT_REPO_URL}/blob/main/{CITATION["source_path"]}"' in done
     assert "<script>" not in done  # model output cannot inject markup
     assert "2 steps, 2.5s, 1200 tokens" in done
 
@@ -207,7 +229,8 @@ def test_build_services_wires_search_and_graph(monkeypatch: pytest.MonkeyPatch) 
     engine = MagicMock()
     search = MagicMock()
     search.keyword.versions = VERSIONS
-    monkeypatch.setattr(main, "get_settings", lambda: MagicMock(database_url="db"))
+    settings = MagicMock(database_url="db", mcp_repo_url="https://github.com/org/repo.git")
+    monkeypatch.setattr(main, "get_settings", lambda: settings)
     monkeypatch.setattr(main, "make_engine", lambda url: engine)
     monkeypatch.setattr(main.Search, "from_settings", lambda s, e: search)
     monkeypatch.setattr(main, "build_question_graph", lambda s, sr: "graph")
@@ -216,8 +239,54 @@ def test_build_services_wires_search_and_graph(monkeypatch: pytest.MonkeyPatch) 
     services.close()
 
     assert (services.versions, services.graph) == (VERSIONS, "graph")
+    assert services.repo_url == "https://github.com/org/repo"
     engine.dispose.assert_called_once()
 
 
 def test_default_services_close_is_a_no_op() -> None:
     Services(versions=VERSIONS, graph=FakeGraph()).close()
+
+
+def test_declines_title_the_panel_closest_sections(client: TestClient, graph: FakeGraph) -> None:
+    graph.result = {
+        "answer": "The MCP docs for 2026-07-28 don't cover this.\n\n- [1] Closest",
+        "citations": [CITATION],
+        "trace": [{"step": "decline", "summary": "", "ms": 0, "tokens": 0}],
+    }
+
+    response = client.get("/ask/stream", params={"question": "q", "version": "all"})
+
+    done = parse_events(response.text)[-1][1]
+    assert '<h2 id="sources-heading">Closest sections</h2>' in done
+
+
+def test_answers_without_citations_have_no_panel(client: TestClient, graph: FakeGraph) -> None:
+    graph.result = {**RESULT, "citations": []}
+
+    response = client.get("/ask/stream", params={"question": "q", "version": "all"})
+
+    assert "sources-heading" not in parse_events(response.text)[-1][1]
+
+
+def cite(n: int) -> str:
+    return f'<a class="cite" href="#source-{n}">{n}</a>'
+
+
+CODE_SPANS = "<p><code>items[0]</code> and <code>a[1]</code></p>"
+CODE_BLOCK = "<pre><code>x = y[1]\n</code></pre>"
+
+
+@pytest.mark.parametrize(
+    ("rendered", "numbers", "expected"),
+    [
+        ("<p>A [1].</p>", [1], f"<p>A [{cite(1)}].</p>"),
+        ("<p>B [1][3]</p>", [1, 3], f"<p>B [{cite(1)}][{cite(3)}]</p>"),
+        ("<p>C [3, 1]</p>", [1, 3], f"<p>C [{cite(3)}, {cite(1)}]</p>"),
+        ("<p>Not cited [7]</p>", [1], "<p>Not cited [7]</p>"),
+        ("<p>Partly [1, 7]</p>", [1], "<p>Partly [1, 7]</p>"),
+        (CODE_SPANS, [1], CODE_SPANS),
+        (f"{CODE_BLOCK}<p>[1]</p>", [1], f"{CODE_BLOCK}<p>[{cite(1)}]</p>"),
+    ],
+)
+def test_link_citations(rendered: str, numbers: list[int], expected: str) -> None:
+    assert link_citations(rendered, numbers) == expected

@@ -23,6 +23,7 @@ class Citation(TypedDict):
     heading_path: str
     spec_version: str
     source_url: str
+    source_path: str  # file in the MCP docs repo
 
 
 class GraphInput(TypedDict):

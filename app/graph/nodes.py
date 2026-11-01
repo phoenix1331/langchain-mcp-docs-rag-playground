@@ -168,6 +168,7 @@ def to_citation(number: int, doc: Document) -> Citation:
         heading_path=doc.metadata["heading_path"],
         spec_version=doc.metadata["spec_version"],
         source_url=doc.metadata["source_url"],
+        source_path=doc.metadata["source_path"],
     )
 
 

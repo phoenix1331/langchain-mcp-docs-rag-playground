@@ -1,2 +1,23 @@
-<div class="rendered">{{ result.answer | markdown | safe }}</div>
+{% set numbers = citations | map(attribute="number") | list %}
+<div class="rendered">{{ result.answer | markdown | link_citations(numbers) | safe }}</div>
+{% if citations %}
+<section class="sources" aria-labelledby="sources-heading">
+  <h2 id="sources-heading">{% if declined %}Closest sections{% else %}Sources{% endif %}</h2>
+  <ol>
+    {% for c in citations %}
+    <li id="source-{{ c.number }}">
+      <span class="source-number">{{ c.number }}</span>
+      <div>
+        <p class="source-heading">{{ c.heading_path }}</p>
+        <p class="source-links">
+          <span class="badge">{{ c.spec_version }}</span>
+          <a href="{{ c.source_url }}" target="_blank" rel="noopener">Docs page</a>
+          <a href="{{ source_base }}{{ c.source_path }}" target="_blank" rel="noopener">Source file</a>
+        </p>
+      </div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
 <p class="answer-meta">{{ steps }} steps, {{ "%.1f" | format(seconds) }}s, {{ tokens }} tokens</p>

@@ -99,6 +99,7 @@ def test_citation_carries_source_details() -> None:
         "heading_path": "Ext › Creds",
         "spec_version": "unversioned",
         "source_url": "https://example.test/b",
+        "source_path": "docs/b.mdx",
     }
 
 

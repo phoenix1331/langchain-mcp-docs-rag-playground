@@ -15,6 +15,7 @@ def doc(key: str, version: str = "2026-07-28", heading: str = "Base › Page") -
             "spec_version": version,
             "heading_path": heading,
             "source_url": f"https://example.test/{key}",
+            "source_path": f"docs/{key}.mdx",
         },
     )
 

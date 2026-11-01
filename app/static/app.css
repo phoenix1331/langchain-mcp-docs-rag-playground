@@ -154,6 +154,79 @@ main, .site-header {
 
 .answer-meta { color: var(--muted); font-size: 0.85rem; }
 
+.cite {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cite:hover, .cite:focus-visible { text-decoration: underline; }
+
+.sources {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+  padding: 0.75rem 0 0.25rem;
+}
+
+.sources h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sources ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sources li {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: 6px;
+}
+
+.sources li:target { background: var(--code-bg); }
+
+.source-number {
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+
+.source-heading {
+  margin: 0;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.source-links {
+  margin: 0.15rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.source-links a { color: var(--accent); }
+
+.badge {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  color: var(--muted);
+}
+
 .stages {
   margin: 0 0 0.75rem;
   padding: 0;

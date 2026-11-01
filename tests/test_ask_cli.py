@@ -19,6 +19,7 @@ RESULT: dict[str, Any] = {
             "heading_path": "Auth › Refresh",
             "spec_version": "2026-07-28",
             "source_url": "https://example.test/a",
+            "source_path": "docs/a.mdx",
         }
     ],
     "trace": [
