@@ -41,6 +41,8 @@ main, .site-header {
   padding: 0 1rem;
 }
 
+main { padding-bottom: 4rem; }
+
 .site-header {
   display: flex;
   flex-wrap: wrap;

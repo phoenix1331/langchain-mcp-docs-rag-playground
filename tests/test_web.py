@@ -108,6 +108,8 @@ def test_index_lists_versions_newest_first_with_latest_selected(client: TestClie
     assert '<option value="all">All versions</option>' in page
     assert 'hx-post="/ask"' in page
     assert f'maxlength="{MAX_QUESTION_CHARS}"' in page
+    # The question box is cleared after a successful submit, but kept after a 422.
+    assert "if (event.detail.successful) this.querySelector('textarea').value = ''" in page
 
 
 def test_static_css_is_served(client: TestClient) -> None:
