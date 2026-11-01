@@ -21,7 +21,7 @@ from app.graph.nodes import (
 )
 from app.graph.state import GraphInput, GraphState, Route
 from app.models import chat_model
-from app.retrieval.search import Search
+from app.retrieval.search import Mode, Search
 
 ROUTE_TARGETS: dict[Route, str] = {
     "retrieve": "retrieve",
@@ -63,18 +63,26 @@ def make_after_grade(
 
 
 def build_graph(
-    nodes: Nodes, relevance_threshold: int = 2, max_rewrites: int = 2
+    nodes: Nodes, relevance_threshold: int = 2, max_rewrites: int = 2, grading: bool = True
 ) -> CompiledStateGraph:
+    """`grading=False` answers straight from retrieval: no grade, rewrite or not-covered
+    decline (the evals comparison baseline for what grading adds)."""
     graph = StateGraph(GraphState, input_schema=GraphInput)
     graph.add_node("route", nodes.route)
     graph.add_node("retrieve", nodes.retrieve)
-    graph.add_node("grade", nodes.grade)
-    graph.add_node("rewrite", nodes.rewrite)
     graph.add_node("answer", nodes.answer)
     graph.add_node("decline", nodes.decline)
 
     graph.add_edge(START, "route")
     graph.add_conditional_edges("route", after_route, ROUTE_TARGETS)
+    graph.add_edge("answer", END)
+    graph.add_edge("decline", END)
+    if not grading:
+        graph.add_edge("retrieve", "answer")
+        return graph.compile()
+
+    graph.add_node("grade", nodes.grade)
+    graph.add_node("rewrite", nodes.rewrite)
     graph.add_edge("retrieve", "grade")
     graph.add_conditional_edges(
         "grade",
@@ -82,19 +90,24 @@ def build_graph(
         ["answer", "rewrite", "decline"],
     )
     graph.add_edge("rewrite", "retrieve")
-    graph.add_edge("answer", END)
-    graph.add_edge("decline", END)
     return graph.compile()
 
 
-def build_question_graph(settings: Settings, search: Search) -> CompiledStateGraph:
-    """The real graph: `ROUTER_MODEL` routes, grades and rewrites; hybrid + rerank search;
-    `ANSWER_MODEL` answers. Thresholds come from settings."""
+def build_question_graph(
+    settings: Settings,
+    search: Search,
+    mode: Mode = Mode.HYBRID,
+    rerank: bool = True,
+    grading: bool = True,
+) -> CompiledStateGraph:
+    """The real graph: `ROUTER_MODEL` routes, grades and rewrites; `ANSWER_MODEL` answers.
+    Defaults are the full pipeline; the switches exist for eval comparisons."""
     versions = search.keyword.versions
+    limit = None if rerank else settings.rerank_top_n
     return build_graph(
         Nodes(
             route=make_route_node(build_router(settings)),
-            retrieve=make_retrieve_node(search),
+            retrieve=make_retrieve_node(search, mode, rerank, limit),
             grade=make_grade_node(build_grader(settings)),
             rewrite=make_rewrite_node(chat_model(settings.router_model)),
             answer=make_answer_node(chat_model(settings.answer_model), versions),
@@ -102,4 +115,5 @@ def build_question_graph(settings: Settings, search: Search) -> CompiledStateGra
         ),
         relevance_threshold=settings.relevance_threshold,
         max_rewrites=settings.max_rewrites,
+        grading=grading,
     )

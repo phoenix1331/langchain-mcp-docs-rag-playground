@@ -85,12 +85,19 @@ def describe_chunk(doc: Document) -> str:
     return " · ".join(parts)
 
 
-def make_retrieve_node(search: Search, mode: Mode = Mode.HYBRID, rerank: bool = True) -> Node:
-    """Search the selected version (plus unversioned pages) for the current query."""
+def make_retrieve_node(
+    search: Search, mode: Mode = Mode.HYBRID, rerank: bool = True, limit: int | None = None
+) -> Node:
+    """Search the selected version (plus unversioned pages) for the current query.
+
+    `limit` keeps the first N chunks; without rerank it gives the answer the same number
+    of chunks a reranked search would, so configurations compare fairly.
+    """
 
     def retrieve(state: GraphState) -> dict[str, Any]:
         started = time.monotonic()
         docs = search.retriever(state["spec_version"], mode, rerank).invoke(state["query"])
+        docs = docs[:limit] if limit else docs
         how = f"{mode} + rerank" if rerank else str(mode)
         summary = f"{len(docs)} chunks for {state['query']!r} ({how})"
         details = [describe_chunk(doc) for doc in docs]

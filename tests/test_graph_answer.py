@@ -84,6 +84,59 @@ def test_describe_chunk_includes_scores_and_ranks_when_present() -> None:
     assert describe_chunk(scored) == expected
 
 
+def test_retrieve_limit_keeps_the_first_chunks(search: Search) -> None:
+    update = make_retrieve_node(search, Mode.BM25, rerank=False, limit=1)(state(query="refresh"))
+
+    assert len(update["documents"]) <= 1
+
+
+@pytest.mark.parametrize(
+    ("switches", "steps", "chunks"),
+    [
+        ({}, ["route", "retrieve", "grade", "answer"], "(hybrid + rerank)"),
+        (
+            {"mode": Mode.VECTOR, "rerank": False, "grading": False},
+            ["route", "retrieve", "answer"],
+            "(vector)",
+        ),
+    ],
+)
+def test_build_question_graph_switches(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    search: Search,
+    switches: dict[str, Any],
+    steps: list[str],
+    chunks: str,
+) -> None:
+    settings = Settings(
+        _env_file=None,
+        database_url="postgresql+psycopg://u:p@localhost/db",
+        router_model="fake:router",
+        answer_model="fake:answer",
+        embed_model="fake:e",
+        rerank_model="fake:rr",
+        relevance_threshold=1,
+        rerank_top_n=1,
+        cache_dir=tmp_path,
+    )
+    raw = AIMessage(content="")
+    router = RunnableLambda(
+        lambda i: {"raw": raw, "parsed": RouteDecision(route="retrieve", reason="")}
+    )
+    grader = RunnableLambda(lambda i: {"raw": raw, "parsed": Grades(relevant=[1, 2], missing="")})
+    monkeypatch.setattr(build_module, "build_router", lambda s: router)
+    monkeypatch.setattr(build_module, "build_grader", lambda s: grader)
+    monkeypatch.setattr(build_module, "chat_model", lambda spec: FakeLLM("ok [1].").runnable())
+
+    result = build_question_graph(settings, search, **switches).invoke(state())
+
+    assert [s["step"] for s in result["trace"]] == steps
+    assert result["trace"][1]["summary"].endswith(chunks)
+    if not switches.get("rerank", True):
+        assert len(result["documents"]) <= settings.rerank_top_n
+
+
 def test_retrieve_mode_and_rerank_are_configurable(search: Search) -> None:
     update = make_retrieve_node(search, Mode.VECTOR, rerank=False)(state(query="q"))
 

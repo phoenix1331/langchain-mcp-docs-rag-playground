@@ -39,6 +39,7 @@ ingest = "ingest.cli:main"
 query = "app.retrieval.cli:main"
 ask = "app.graph.cli:main"
 evals = "evals.run:main"
+evals-compare = "evals.results:main"
 
 [build-system]
 requires = ["hatchling"]

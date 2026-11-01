@@ -22,7 +22,7 @@ from app.config import Settings, get_settings
 from app.db import make_engine
 from app.graph.build import build_question_graph
 from app.models import chat_model
-from app.retrieval.search import Search
+from app.retrieval.search import Mode, Search
 from evals.langsmith_sync import publish
 from evals.questions import Question, load_questions
 from evals.scoring import JUDGE_PROMPT, Judge, Judgement, make_judge, score, summarise
@@ -70,16 +70,18 @@ def build_judge(settings: Settings) -> Runnable[dict[str, str], dict[str, Any]]:
     return JUDGE_PROMPT | llm.with_structured_output(Judgement, include_raw=True)
 
 
-def config_summary(settings: Settings) -> dict[str, Any]:
+def config_summary(
+    settings: Settings, mode: Mode = Mode.HYBRID, rerank: bool = True, grading: bool = True
+) -> dict[str, Any]:
     return {
         "router_model": settings.router_model,
         "answer_model": settings.answer_model,
         "judge_model": settings.judge_model or settings.answer_model,
         "embed_model": settings.embed_model,
         "rerank_model": settings.rerank_model,
-        "mode": "hybrid",
-        "rerank": True,
-        "grading": True,
+        "mode": str(mode),
+        "rerank": rerank,
+        "grading": grading,
         "top_k": settings.top_k,
         "rerank_top_n": settings.rerank_top_n,
         "relevance_threshold": settings.relevance_threshold,
@@ -210,6 +212,9 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--limit", type=int, help="run only the first N questions")
     parser.add_argument("--resume", type=Path, help="a results file to continue")
     parser.add_argument("--pause", type=float, help="seconds between questions")
+    parser.add_argument("--mode", type=Mode, choices=list(Mode), default=Mode.HYBRID)
+    parser.add_argument("--no-rerank", dest="rerank", action="store_false")
+    parser.add_argument("--no-grading", dest="grading", action="store_false")
     parser.add_argument("--no-langsmith", dest="langsmith", action="store_false")
     return parser.parse_args(argv)
 
@@ -238,13 +243,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     payload: dict[str, Any] = (
         json.loads(path.read_text(encoding="utf-8"))
         if args.resume
-        else {"label": args.label, "started_at": stamp, "config": config_summary(settings)}
+        else {
+            "label": args.label,
+            "started_at": stamp,
+            "config": config_summary(settings, args.mode, args.rerank, args.grading),
+        }
     )
 
     engine = make_engine(settings.database_url)
     try:
         search = Search.from_settings(settings, engine)
-        graph = build_question_graph(settings, search)
+        config = payload["config"]  # a resumed run keeps its original switches
+        graph = build_question_graph(
+            settings, search, Mode(config["mode"]), config["rerank"], config["grading"]
+        )
         judge = make_judge(build_judge(settings))
         pause = settings.eval_pause_seconds if args.pause is None else args.pause
         payload = run(questions, graph, judge, payload, path, pause)

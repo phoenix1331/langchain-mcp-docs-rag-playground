@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -22,6 +23,17 @@ from evals.run import (
 )
 
 QUESTIONS = load_questions()
+SETTINGS = SimpleNamespace(
+    router_model="fake:r",
+    answer_model="fake:a",
+    judge_model=None,
+    embed_model="fake:e",
+    rerank_model="fake:rr",
+    top_k=20,
+    rerank_top_n=6,
+    relevance_threshold=2,
+    max_rewrites=2,
+)
 BY_ID = {q.id: q for q in QUESTIONS}
 
 
@@ -248,15 +260,24 @@ def wired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(run_module, "get_settings", lambda: settings)
     monkeypatch.setattr(run_module, "make_engine", lambda url: engine)
     monkeypatch.setattr(run_module.Search, "from_settings", lambda s, e: MagicMock())
-    monkeypatch.setattr(run_module, "build_question_graph", lambda s, sr: FakeGraph())
+    graphs: list[tuple[Any, ...]] = []
+
+    def build_graph(settings: Any, search: Any, *switches: Any) -> FakeGraph:
+        graphs.append(switches)
+        return FakeGraph()
+
+    monkeypatch.setattr(run_module, "build_question_graph", build_graph)
     monkeypatch.setattr(run_module, "build_judge", lambda s: MagicMock())
     monkeypatch.setattr(run_module, "make_judge", lambda chain: judge_all)
     monkeypatch.setattr(run_module, "RESULTS_DIR", tmp_path)
-    monkeypatch.setattr(run_module, "config_summary", lambda s: {"mode": "hybrid"})
+    real_config = run_module.config_summary
+    monkeypatch.setattr(
+        run_module, "config_summary", lambda s, *switches: real_config(SETTINGS, *switches)
+    )
     monkeypatch.setattr(
         run_module, "publish", lambda payload, qs: published.append(payload["label"]) or "exp-1"
     )
-    return {"engine": engine, "published": published, "dir": tmp_path}
+    return {"engine": engine, "published": published, "dir": tmp_path, "graphs": graphs}
 
 
 def test_main_runs_saves_and_publishes(
@@ -280,10 +301,13 @@ def test_main_skips_langsmith_when_asked(wired: dict[str, Any]) -> None:
 
 def test_main_resumes_an_existing_file(wired: dict[str, Any]) -> None:
     path = wired["dir"] / "old.json"
-    path.write_text(json.dumps({"label": "old", "config": {"x": 1}, "results": []}))
+    config = {"mode": "vector", "rerank": False, "grading": False}
+    path.write_text(json.dumps({"label": "old", "config": config, "results": []}))
 
+    # The resumed run keeps its stored switches, whatever the command line says.
     assert main(["--resume", str(path), "--ids", "banana-bread", "--no-langsmith"]) == 0
-    assert json.loads(path.read_text())["config"] == {"x": 1}
+    assert json.loads(path.read_text())["config"] == config
+    assert wired["graphs"] == [("vector", False, False)]
 
 
 def test_main_returns_3_when_stopped(
@@ -319,3 +343,14 @@ def test_build_judge_uses_the_judge_or_answer_model(monkeypatch: pytest.MonkeyPa
     run_module.build_judge(MagicMock(judge_model="anthropic:j", answer_model="google_genai:a"))
 
     assert built == ["google_genai:a", "anthropic:j"]
+
+
+def test_main_passes_config_switches_to_the_graph(wired: dict[str, Any]) -> None:
+    args = ["--ids", "banana-bread", "--mode", "vector", "--no-rerank", "--no-grading"]
+
+    assert main([*args, "--no-langsmith"]) == 0
+
+    assert wired["graphs"] == [("vector", False, False)]
+    [path] = list(wired["dir"].glob("*-run.json"))
+    config = json.loads(path.read_text())["config"]
+    assert (config["mode"], config["rerank"], config["grading"]) == ("vector", False, False)

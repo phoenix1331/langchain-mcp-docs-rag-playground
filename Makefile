@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 PORT ?= 8000
-.PHONY: help install db-setup db-check ingest query ask dev evals test coverage lint format
+.PHONY: help install db-setup db-check ingest query ask dev evals evals-compare test coverage lint format
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -29,6 +29,9 @@ dev: ## Run the web app with auto-reload (PORT, default 8000)
 
 evals: ## Run the eval question set: make evals ARGS="--label baseline" (or --ids, --limit, --resume FILE)
 	@uv run evals $(ARGS)
+
+evals-compare: ## Compare saved eval runs side by side
+	@uv run evals-compare
 
 test: ## Run the test suite
 	@uv run pytest

@@ -232,3 +232,31 @@ def test_describe_result() -> None:
     assert describe_result({}) == "  done"
     no_summary = [{**trace[0], "summary": ""}]
     assert describe_result({"trace": no_summary}) == "  done in 1.0s, 1780 tokens"
+
+
+def test_without_grading_the_graph_answers_straight_from_retrieval() -> None:
+    visited: list[str] = []
+
+    def step(name: str, update: dict[str, Any]) -> Any:
+        def node(graph_state: GraphState) -> dict[str, Any]:
+            visited.append(name)
+            return {**update, "trace": [{"step": name, "summary": "", "ms": 0, "tokens": 0}]}
+
+        return node
+
+    graph = build_graph(
+        Nodes(
+            route=step("route", {"route": "retrieve", "query": "q"}),
+            retrieve=step("retrieve", {"documents": DOCS}),
+            grade=step("grade", {}),
+            rewrite=step("rewrite", {}),
+            answer=step("answer", {"answer": "ok"}),
+            decline=step("decline", {}),
+        ),
+        grading=False,
+    )
+
+    graph.invoke({"question": "q", "spec_version": "latest"})
+
+    assert visited == ["route", "retrieve", "answer"]
+    assert "grade" not in graph.get_graph().nodes
