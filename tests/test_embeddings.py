@@ -5,6 +5,7 @@ from langchain_core.embeddings import DeterministicFakeEmbedding
 from pydantic import Field, SecretStr
 
 from app.config import MissingSecretError, Settings
+from ingest import embeddings as embeddings_module
 from ingest.embeddings import (
     RateLimitedEmbeddings,
     RateLimiter,
@@ -13,6 +14,7 @@ from ingest.embeddings import (
     cache_namespace,
     estimate_tokens,
     voyage_embeddings,
+    voyage_token_counter,
 )
 
 
@@ -111,8 +113,14 @@ def test_batch_by_tokens() -> None:
 
     batches = batch_by_tokens(texts, max_tokens=20)
 
-    assert batches == [["a" * 40, "b" * 40], ["c" * 40], ["d" * 400]]
+    assert batches == [(["a" * 40, "b" * 40], 20), (["c" * 40], 10), (["d" * 400], 100)]
     assert batch_by_tokens([], max_tokens=20) == []
+
+
+def test_batch_by_tokens_uses_the_given_counter() -> None:
+    batches = batch_by_tokens(["a", "b", "c"], max_tokens=10, count=lambda text: 6)
+
+    assert batches == [(["a"], 6), (["b"], 6), (["c"], 6)]
 
 
 def test_rate_limited_embeddings_batches_and_reports(clock: FakeClock) -> None:
@@ -178,3 +186,89 @@ def test_cache_only_sends_misses_to_the_api(tmp_path: Path) -> None:
     assert inner.calls == [["same", "other"], ["new"]]
     assert first[0] == second[0]
     assert (tmp_path / "embeddings").is_dir()
+
+
+class Flaky(DeterministicFakeEmbedding):
+    failures: int = 0
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if self.failures:
+            self.failures -= 1
+            raise TimeoutError("rate limited")
+        return super().embed_documents(texts)
+
+
+def test_rate_limit_errors_are_retried_after_a_window(clock: FakeClock) -> None:
+    retries: list[int] = []
+    embeddings = RateLimitedEmbeddings(
+        Flaky(size=8, failures=2),
+        RateLimiter(0, 0, clock=clock),
+        1000,
+        retry_on=(TimeoutError,),
+        sleep=clock.sleep,
+        on_retry=retries.append,
+    )
+
+    assert len(embeddings.embed_documents(["a"])) == 1
+    assert retries == [1, 2]
+    assert clock.sleeps == [60, 60]
+
+
+def test_retries_give_up_after_the_limit(clock: FakeClock) -> None:
+    embeddings = RateLimitedEmbeddings(
+        Flaky(size=8, failures=5),
+        RateLimiter(0, 0, clock=clock),
+        1000,
+        retry_on=(TimeoutError,),
+        max_retries=2,
+        sleep=clock.sleep,
+    )
+
+    with pytest.raises(TimeoutError):
+        embeddings.embed_documents(["a"])
+    assert clock.sleeps == [60, 60]
+
+
+def test_other_errors_are_not_retried(clock: FakeClock) -> None:
+    embeddings = RateLimitedEmbeddings(
+        Flaky(size=8, failures=1), RateLimiter(0, 0, clock=clock), 1000, sleep=clock.sleep
+    )
+
+    with pytest.raises(TimeoutError):
+        embeddings.embed_documents(["a"])
+    assert clock.sleeps == []
+
+
+def test_voyage_token_counter_uses_the_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[tuple[list[str], str]] = []
+
+    class FakeClient:
+        def __init__(self, api_key: str) -> None:
+            assert api_key == "key"
+
+        def count_tokens(self, texts: list[str], model: str) -> int:
+            calls.append((texts, model))
+            return 42
+
+    monkeypatch.setattr(embeddings_module.voyageai, "Client", FakeClient)
+
+    assert voyage_token_counter(settings(tmp_path))("hello") == 42
+    assert calls == [(["hello"], "voyage-test")]
+
+
+def test_build_uses_voyage_counter_and_retries_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = DeterministicFakeEmbedding(size=8)
+    monkeypatch.setattr(embeddings_module, "voyage_embeddings", lambda s: fake)
+    monkeypatch.setattr(embeddings_module, "voyage_token_counter", lambda s: lambda text: 7)
+
+    built = build_ingest_embeddings(settings(tmp_path))
+
+    limited = built.underlying_embeddings
+    assert isinstance(limited, RateLimitedEmbeddings)
+    assert limited.inner is fake
+    assert limited.count_tokens("anything") == 7
+    assert limited.retry_on == (embeddings_module.RateLimitError,)

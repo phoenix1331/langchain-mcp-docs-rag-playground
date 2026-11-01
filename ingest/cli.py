@@ -66,7 +66,10 @@ def run_ingest(
         embedded += count
         log(f"  embedded {embedded} new texts")
 
-    embeddings = build_ingest_embeddings(settings, inner_embeddings, on_batch)
+    def on_retry(attempt: int) -> None:
+        log(f"  rate limited by the API; waiting a minute (retry {attempt})")
+
+    embeddings = build_ingest_embeddings(settings, inner_embeddings, on_batch, on_retry)
     engine = make_engine(settings.database_url)
     try:
         check_dimensions(engine, settings.embed_dimensions)

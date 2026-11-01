@@ -33,6 +33,7 @@ def upstream(tmp_path: Path) -> Path:
     git("config", "user.email", "test@example.com", cwd=repo)
     git("config", "user.name", "test", cwd=repo)
     git("config", "core.hooksPath", "/dev/null", cwd=repo)
+    git("config", "commit.gpgsign", "false", cwd=repo)
     commit_file(repo, "a.mdx", "first")
     return repo
 

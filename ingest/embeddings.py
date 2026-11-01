@@ -9,17 +9,24 @@ import time
 from collections import deque
 from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
+import voyageai
 from langchain_classic.embeddings import CacheBackedEmbeddings
 from langchain_classic.storage import LocalFileStore
 from langchain_core.embeddings import Embeddings
 from langchain_voyageai import VoyageAIEmbeddings
 from pydantic import SecretStr
+from voyageai.error import RateLimitError
 
 from app.config import Settings, require_secret
 
 WINDOW_SECONDS = 60.0
-CHARS_PER_TOKEN = 4  # conservative: Voyage counts roughly 16% fewer tokens than this
+CHARS_PER_TOKEN = 4  # rough fallback only: code-heavy text can run 2.5x higher
+MAX_RETRIES = 5
+
+TokenCounter = Callable[[str], int]
+T = TypeVar("T")
 
 
 def estimate_tokens(text: str) -> int:
@@ -62,25 +69,31 @@ class RateLimiter:
         return not self.tpm or used + tokens <= self.tpm
 
 
-def batch_by_tokens(texts: list[str], max_tokens: int) -> list[list[str]]:
-    """Group texts into batches whose estimated tokens stay within `max_tokens`."""
-    batches: list[list[str]] = []
+def batch_by_tokens(
+    texts: list[str], max_tokens: int, count: TokenCounter = estimate_tokens
+) -> list[tuple[list[str], int]]:
+    """Group texts into `(batch, tokens)` pairs whose token counts stay within `max_tokens`."""
+    batches: list[tuple[list[str], int]] = []
     current: list[str] = []
     used = 0
     for text in texts:
-        tokens = estimate_tokens(text)
+        tokens = count(text)
         if current and used + tokens > max_tokens:
-            batches.append(current)
+            batches.append((current, used))
             current, used = [], 0
         current.append(text)
         used += tokens
     if current:
-        batches.append(current)
+        batches.append((current, used))
     return batches
 
 
 class RateLimitedEmbeddings(Embeddings):
-    """Sends token-bounded batches to `inner`, waiting on `limiter` before each request."""
+    """Sends token-bounded batches to `inner`, waiting on `limiter` before each request.
+
+    If the API still rate-limits (estimates off, or another client sharing the key), the
+    request is retried after a full window, up to `max_retries` times.
+    """
 
     def __init__(
         self,
@@ -88,26 +101,49 @@ class RateLimitedEmbeddings(Embeddings):
         limiter: RateLimiter,
         batch_tokens: int,
         on_batch: Callable[[int], None] | None = None,
+        count_tokens: TokenCounter = estimate_tokens,
+        retry_on: tuple[type[Exception], ...] = (),
+        max_retries: int = MAX_RETRIES,
+        sleep: Callable[[float], None] = time.sleep,
+        on_retry: Callable[[int], None] | None = None,
     ) -> None:
         self.inner = inner
         self.limiter = limiter
         self.batch_tokens = batch_tokens
         self.on_batch = on_batch
+        self.count_tokens = count_tokens
+        self.retry_on = retry_on
+        self.max_retries = max_retries
+        self._sleep = sleep
+        self.on_retry = on_retry
+
+    def _request(self, tokens: int, call: Callable[[], T]) -> T:
+        attempt = 0
+        while True:
+            self.limiter.acquire(tokens)
+            try:
+                return call()
+            except self.retry_on:
+                attempt += 1
+                if attempt > self.max_retries:
+                    raise
+                if self.on_retry:
+                    self.on_retry(attempt)
+                self._sleep(WINDOW_SECONDS)
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed each distinct text once; duplicates in the same call share a vector."""
         unique = list(dict.fromkeys(texts))
         vectors: dict[str, list[float]] = {}
-        for batch in batch_by_tokens(unique, self.batch_tokens):
-            self.limiter.acquire(sum(estimate_tokens(t) for t in batch))
-            vectors.update(zip(batch, self.inner.embed_documents(batch), strict=True))
+        for batch, tokens in batch_by_tokens(unique, self.batch_tokens, self.count_tokens):
+            embedded = self._request(tokens, lambda b=batch: self.inner.embed_documents(b))
+            vectors.update(zip(batch, embedded, strict=True))
             if self.on_batch:
                 self.on_batch(len(batch))
         return [vectors[text] for text in texts]
 
     def embed_query(self, text: str) -> list[float]:
-        self.limiter.acquire(estimate_tokens(text))
-        return self.inner.embed_query(text)
+        return self._request(self.count_tokens(text), lambda: self.inner.embed_query(text))
 
 
 def voyage_embeddings(settings: Settings) -> VoyageAIEmbeddings:
@@ -119,6 +155,12 @@ def voyage_embeddings(settings: Settings) -> VoyageAIEmbeddings:
     )
 
 
+def voyage_token_counter(settings: Settings) -> TokenCounter:
+    """Exact Voyage token counts, computed locally with the model's tokenizer."""
+    client = voyageai.Client(api_key=require_secret(settings.voyage_api_key, "VOYAGE_API_KEY"))
+    return lambda text: client.count_tokens([text], model=settings.embed_model)
+
+
 def cache_namespace(settings: Settings) -> str:
     """Cache keys include the model and dimensions, so changing either re-embeds."""
     return f"{settings.embed_model}-{settings.embed_dimensions}"
@@ -128,13 +170,29 @@ def build_ingest_embeddings(
     settings: Settings,
     inner: Embeddings | None = None,
     on_batch: Callable[[int], None] | None = None,
+    on_retry: Callable[[int], None] | None = None,
 ) -> CacheBackedEmbeddings:
-    """Cache(RateLimited(Voyage)): only cache misses reach the API, within rate limits."""
+    """Cache(RateLimited(Voyage)): only cache misses reach the API, within rate limits.
+
+    A custom `inner` (tests) uses the character-based token estimate; Voyage uses its
+    real tokenizer and retries on Voyage rate-limit errors.
+    """
+    count: TokenCounter = estimate_tokens
+    retry_on: tuple[type[Exception], ...] = ()
+    if inner is None:
+        inner, count, retry_on = (
+            voyage_embeddings(settings),
+            voyage_token_counter(settings),
+            (RateLimitError,),
+        )
     limited = RateLimitedEmbeddings(
-        inner or voyage_embeddings(settings),
+        inner,
         RateLimiter(settings.embed_rpm, settings.embed_tpm),
         settings.embed_batch_tokens,
         on_batch,
+        count_tokens=count,
+        retry_on=retry_on,
+        on_retry=on_retry,
     )
     store = LocalFileStore(Path(settings.cache_dir) / "embeddings")
     return CacheBackedEmbeddings.from_bytes_store(

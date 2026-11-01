@@ -1,7 +1,9 @@
+from collections.abc import Callable
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from langchain_classic.embeddings import CacheBackedEmbeddings
 from langchain_core.embeddings import DeterministicFakeEmbedding, Embeddings
 from langchain_core.indexing import InMemoryRecordManager
 from langchain_core.vectorstores import InMemoryVectorStore
@@ -127,3 +129,25 @@ def test_default_log_writes_to_stderr(capsys: pytest.CaptureFixture[str]) -> Non
     cli._log("indexed 100/200 chunks")
 
     assert capsys.readouterr().err == "indexed 100/200 chunks\n"
+
+
+def test_rate_limit_retries_are_logged(
+    fake_pipeline: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_build = cli.build_ingest_embeddings
+
+    def build(
+        settings: Settings,
+        inner: Embeddings | None,
+        on_batch: Callable[[int], None],
+        on_retry: Callable[[int], None],
+    ) -> CacheBackedEmbeddings:
+        on_retry(1)
+        return real_build(settings, inner, on_batch, on_retry)
+
+    monkeypatch.setattr(cli, "build_ingest_embeddings", build)
+    logs: list[str] = []
+
+    run_ingest(fake_pipeline, DeterministicFakeEmbedding(size=8), logs.append)
+
+    assert "  rate limited by the API; waiting a minute (retry 1)" in logs
