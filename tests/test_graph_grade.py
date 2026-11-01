@@ -224,3 +224,5 @@ def test_describe_result() -> None:
     no_tokens = [{**trace[0], "tokens": 0}]
     assert describe_result({"trace": no_tokens}) == "  done in 1.0s: 2 of 6 chunks relevant"
     assert describe_result({}) == "  done"
+    no_summary = [{**trace[0], "summary": ""}]
+    assert describe_result({"trace": no_summary}) == "  done in 1.0s, 1780 tokens"

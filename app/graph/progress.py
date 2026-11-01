@@ -31,4 +31,5 @@ def describe_result(update: dict[str, Any]) -> str:
         return "  done"
     step = steps[-1]
     tokens = f", {step['tokens']} tokens" if step["tokens"] else ""
-    return f"  done in {step['ms'] / 1000:.1f}s{tokens}: {step['summary']}"
+    summary = f": {step['summary']}" if step["summary"] else ""
+    return f"  done in {step['ms'] / 1000:.1f}s{tokens}{summary}"

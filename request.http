@@ -12,8 +12,8 @@ GET {{baseUrl}}/
 
 ### Ask
 
-# Ask a question about the latest spec version (use the newest dated version from the picker).
-# Returns the HTML fragment HTMX swaps into the page. Uses 3 model calls typically.
+# Validate a question and return the fragment that opens the answer stream.
+# No model calls: the graph runs when the stream below is opened.
 POST {{baseUrl}}/ask
 Content-Type: application/x-www-form-urlencoded
 
@@ -26,6 +26,19 @@ POST {{baseUrl}}/ask
 Content-Type: application/x-www-form-urlencoded
 
 question=What changed in how servers declare tools?&version=all
+
+### Answer stream
+
+# Server-sent events: `stage` lines per graph step, `token` answer text as it is written,
+# then `done` with the rendered answer. Runs the graph (3 model calls typically).
+GET {{baseUrl}}/ask/stream?question=How%20does%20a%20client%20refresh%20an%20OAuth%20access%20token%3F&version=2026-07-28
+Accept: text/event-stream
+
+###
+
+# Validation errors also arrive as a `done` event with status 200, so EventSource does not retry.
+GET {{baseUrl}}/ask/stream?question=What%20is%20sampling%3F&version=1999-01-01
+Accept: text/event-stream
 
 ###
 

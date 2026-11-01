@@ -154,6 +154,25 @@ main, .site-header {
 
 .answer-meta { color: var(--muted); font-size: 0.85rem; }
 
+.stages {
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.stages li { padding: 0.1rem 0; }
+.stage-done { padding-left: 1rem; }
+.stage-done::before { content: "\2713  "; color: var(--accent); }
+
+.streaming {
+  white-space: pre-wrap;
+  padding: 1rem 0;
+}
+
+.streaming:empty::before { content: "Waiting for the answer..."; color: var(--muted); }
+
 .error {
   margin-top: 1.5rem;
   color: var(--error);
