@@ -9,6 +9,7 @@ from langchain_core.embeddings import Embeddings
 
 from app.config import MissingSecretError, Settings, get_settings
 from app.db import make_engine
+from app.retrieval.bm25 import SNAPSHOT_NAME, stored_chunks, write_snapshot
 from ingest.embeddings import build_ingest_embeddings
 from ingest.fetch import FetchError, discover_versions, sync_repo
 from ingest.index import (
@@ -79,8 +80,12 @@ def run_ingest(
             build_vector_store(engine, embeddings, settings.embed_dimensions),
             on_progress=lambda n: log(f"indexed {n}/{len(chunks)} chunks"),
         )
+        stored = stored_chunks(engine)
     finally:
         engine.dispose()
+
+    write_snapshot(stored, settings.cache_dir / SNAPSHOT_NAME)
+    log(f"bm25 snapshot rebuilt from {len(stored)} stored chunks")
 
     return IngestSummary(
         commit=commit,

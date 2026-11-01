@@ -4,12 +4,14 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_classic.embeddings import CacheBackedEmbeddings
+from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding, Embeddings
 from langchain_core.indexing import InMemoryRecordManager
 from langchain_core.vectorstores import InMemoryVectorStore
 from pydantic import SecretStr
 
 from app.config import MissingSecretError, Settings
+from app.retrieval.bm25 import SNAPSHOT_NAME, read_snapshot
 from ingest import cli
 from ingest.cli import IngestSummary, format_summary, run_ingest
 from ingest.fetch import FetchError
@@ -49,7 +51,22 @@ def fake_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settings:
     monkeypatch.setattr(cli, "make_engine", lambda url: engine)
     monkeypatch.setattr(cli, "build_record_manager", lambda e: manager)
     monkeypatch.setattr(cli, "check_dimensions", lambda e, dims: None)
-    monkeypatch.setattr(cli, "build_vector_store", lambda e, emb, dims: InMemoryVectorStore(emb))
+    stores: list[InMemoryVectorStore] = []
+
+    def build_store(engine: object, emb: Embeddings, dims: int) -> InMemoryVectorStore:
+        stores.append(InMemoryVectorStore(emb))
+        if len(stores) > 1:
+            stores[-1].store = stores[0].store  # same "database" across runs
+        return stores[-1]
+
+    def stored(engine: object) -> list[Document]:
+        return [
+            Document(id=key, page_content=row["text"], metadata=row["metadata"])
+            for key, row in stores[0].store.items()
+        ]
+
+    monkeypatch.setattr(cli, "build_vector_store", build_store)
+    monkeypatch.setattr(cli, "stored_chunks", stored)
     return make_settings(tmp_path)
 
 
@@ -67,6 +84,9 @@ def test_run_ingest_indexes_then_skips(fake_pipeline: Settings) -> None:
     assert first.versions == ("2025-11-25", "2026-07-28")
     assert any("2 pages -> 2 chunks" in line for line in logs)
     assert any("embedded 1 new texts" in line for line in logs)
+    assert "bm25 snapshot rebuilt from 2 stored chunks" in logs
+    snapshot = read_snapshot(fake_pipeline.cache_dir / SNAPSHOT_NAME)
+    assert {d.metadata["spec_version"] for d in snapshot} == {"2025-11-25", "2026-07-28"}
 
 
 def test_format_summary() -> None:
