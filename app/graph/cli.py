@@ -1,13 +1,19 @@
-"""`uv run ask`: answer one question through the graph and show how it got there."""
+"""`uv run ask`: answer one question through the graph, showing each stage as it runs.
+
+Progress goes to stderr and the answer to stdout, so the answer can be piped.
+"""
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
+
+from langgraph.graph.state import CompiledStateGraph
 
 from app.config import get_settings
 from app.db import make_engine
 from app.graph.build import build_question_graph
+from app.graph.progress import describe_result, describe_start
 from app.graph.state import Citation, TraceStep
 from app.models import ModelConfigError
 from app.retrieval.bm25 import MissingSnapshotError
@@ -43,6 +49,26 @@ def format_trace(trace: list[TraceStep]) -> str:
     return "\n".join(lines)
 
 
+def progress(message: str) -> None:
+    print(message, file=sys.stderr, flush=True)
+
+
+def run_with_progress(
+    graph: CompiledStateGraph, inputs: dict[str, str], emit: Callable[[str], None]
+) -> dict[str, Any]:
+    """Stream the graph: report each node as it starts and finishes; return the final state."""
+    final: dict[str, Any] = {}
+    for mode, event in graph.stream(inputs, stream_mode=["tasks", "values"]):
+        if mode == "values":
+            final = event
+            continue
+        if "result" not in event:
+            emit(describe_start(event["name"], event["input"]))
+            continue
+        emit(describe_result(event["result"] or {}))
+    return final
+
+
 def format_result(result: dict[str, Any]) -> str:
     parts = [result["answer"].strip()]
     if result.get("citations"):
@@ -59,12 +85,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         search = Search.from_settings(settings, engine)
         search.scope(args.version)  # reject unknown versions before any model call
         graph = build_question_graph(settings, search)
-        result = graph.invoke({"question": args.question, "spec_version": args.version})
+        inputs = {"question": args.question, "spec_version": args.version}
+        result = run_with_progress(graph, inputs, progress)
     except (MissingSnapshotError, ModelConfigError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     finally:
         engine.dispose()
 
+    progress("")
     print(format_result(result))
     return 0

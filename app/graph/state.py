@@ -36,6 +36,7 @@ class GraphState(GraphInput):
     rewrites: NotRequired[int]
     documents: NotRequired[list[Document]]
     grades: NotRequired[list[bool]]  # relevance per entry in `documents`
+    missing: NotRequired[str]  # what the relevant chunks lack, from the grader; feeds rewrite
     answer: NotRequired[str]
     citations: NotRequired[list[Citation]]  # sources the answer actually cites
     trace: NotRequired[Annotated[list[TraceStep], operator.add]]  # nodes append, never replace

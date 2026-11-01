@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -28,6 +29,23 @@ RESULT: dict[str, Any] = {
 }
 
 
+class FakeGraph:
+    """Streams `tasks` start/result events per trace step, then the final `values`."""
+
+    def __init__(self, result: dict[str, Any]) -> None:
+        self.result = result
+        self.inputs: list[dict[str, str]] = []
+
+    def stream(self, inputs: dict[str, str], stream_mode: list[str]) -> Iterator[tuple[str, Any]]:
+        assert stream_mode == ["tasks", "values"]
+        self.inputs.append(inputs)
+        state = {**inputs, "query": inputs["question"], "documents": [], "route": "retrieve"}
+        for step in self.result["trace"]:
+            yield "tasks", {"id": step["step"], "name": step["step"], "input": state}
+            yield "tasks", {"id": step["step"], "name": step["step"], "result": {"trace": [step]}}
+        yield "values", self.result
+
+
 @pytest.fixture
 def wired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     settings = Settings(
@@ -41,8 +59,7 @@ def wired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     )
     engine = MagicMock()
     search = MagicMock()
-    graph = MagicMock()
-    graph.invoke.return_value = RESULT
+    graph = FakeGraph(RESULT)
     monkeypatch.setattr(cli, "get_settings", lambda: settings)
     monkeypatch.setattr(cli, "make_engine", lambda url: engine)
     monkeypatch.setattr(cli.Search, "from_settings", lambda s, e: search)
@@ -55,14 +72,19 @@ def test_ask_prints_answer_sources_and_trace(
 ) -> None:
     assert cli.main(["How are tokens refreshed?", "--version", "2026-07-28"]) == 0
 
-    out = capsys.readouterr().out
+    captured = capsys.readouterr()
+    out = captured.out
     assert out.startswith("Refresh with the grant [1].\n\nSources\n")
+    assert captured.err.startswith(
+        "Deciding whether this needs the docs...\n  done in 0.9s, 200 tokens: retrieve: about MCP\n"
+        "Searching the 2026-07-28 docs for 'How are tokens refreshed?'...\n"
+    )
     assert "  [1] 2026-07-28  Auth › Refresh\n      https://example.test/a" in out
     assert "  route       0.9s    200 tok  retrieve: about MCP" in out
     assert "  total 5.5s, 2300 tokens" in out
-    wired["graph"].invoke.assert_called_once_with(
+    assert wired["graph"].inputs == [
         {"question": "How are tokens refreshed?", "spec_version": "2026-07-28"}
-    )
+    ]
     wired["search"].scope.assert_called_once_with("2026-07-28")
     wired["engine"].dispose.assert_called_once()
 
@@ -70,7 +92,7 @@ def test_ask_prints_answer_sources_and_trace(
 def test_ask_without_citations_skips_sources(
     wired: dict[str, Any], capsys: pytest.CaptureFixture[str]
 ) -> None:
-    wired["graph"].invoke.return_value = {**RESULT, "citations": []}
+    wired["graph"].result = {**RESULT, "citations": []}
 
     assert cli.main(["hi"]) == 0
     assert "Sources" not in capsys.readouterr().out
@@ -91,5 +113,5 @@ def test_ask_reports_setup_errors(
 
     assert cli.main(["q", "--version", "1999-01-01"]) == 1
     assert capsys.readouterr().err == f"error: {error}\n"
-    wired["graph"].invoke.assert_not_called()
+    assert wired["graph"].inputs == []
     wired["engine"].dispose.assert_called_once()

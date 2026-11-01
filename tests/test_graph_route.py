@@ -7,7 +7,14 @@ from langchain_core.runnables import RunnableLambda
 
 from app.config import Settings
 from app.graph.build import ROUTE_TARGETS, Nodes, build_graph
-from app.graph.nodes import ROUTE_PROMPT, RouteDecision, build_router, make_route_node
+from app.graph.nodes import (
+    GRADE_PROMPT,
+    ROUTE_PROMPT,
+    RouteDecision,
+    build_grader,
+    build_router,
+    make_route_node,
+)
 from app.graph.state import GraphState, trace_step
 
 
@@ -60,10 +67,10 @@ def test_trace_step_without_usage_has_zero_tokens() -> None:
     assert trace_step("x", "y", 0.0, AIMessage(content="no usage"))["tokens"] == 0
 
 
-def visit(name: str, visited: list[str]) -> Any:
+def visit(name: str, visited: list[str], update: dict[str, Any] | None = None) -> Any:
     def node(graph_state: GraphState) -> dict[str, Any]:
         visited.append(name)
-        return {"trace": [{"step": name, "summary": "", "ms": 0, "tokens": 0}]}
+        return {**(update or {}), "trace": [{"step": name, "summary": "", "ms": 0, "tokens": 0}]}
 
     return node
 
@@ -71,7 +78,7 @@ def visit(name: str, visited: list[str]) -> Any:
 @pytest.mark.parametrize(
     ("route", "path"),
     [
-        ("retrieve", ["retrieve", "answer"]),
+        ("retrieve", ["retrieve", "grade", "answer"]),
         ("direct", ["answer"]),
         ("out_of_scope", ["decline"]),
     ],
@@ -82,6 +89,8 @@ def test_graph_follows_the_route(route: str, path: list[str]) -> None:
         Nodes(
             route=make_route_node(router_reply(route)),
             retrieve=visit("retrieve", visited),
+            grade=visit("grade", visited, {"grades": [True, True]}),
+            rewrite=visit("rewrite", visited),
             answer=visit("answer", visited),
             decline=visit("decline", visited),
         )
@@ -119,3 +128,12 @@ def test_build_router_chains_prompt_and_configured_model(
 
     assert router.first is ROUTE_PROMPT  # type: ignore[attr-defined]
     assert "flash-test" in repr(router)
+
+
+def test_build_grader_uses_the_fast_model(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GOOGLE_API_KEY", "key")
+
+    grader = build_grader(settings(tmp_path))
+
+    assert grader.first is GRADE_PROMPT  # type: ignore[attr-defined]
+    assert "flash-test" in repr(grader)

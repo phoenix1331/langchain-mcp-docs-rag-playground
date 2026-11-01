@@ -11,13 +11,12 @@ from app.config import Settings
 from app.graph import build as build_module
 from app.graph.build import build_question_graph
 from app.graph.nodes import (
-    OUT_OF_SCOPE_ANSWER,
+    Grades,
     RouteDecision,
     cited,
     describe_version,
     format_sources,
     make_answer_node,
-    make_decline_node,
     make_retrieve_node,
     relevant_documents,
     source_kind,
@@ -167,14 +166,6 @@ def test_direct_route_answers_without_sources() -> None:
     assert update["trace"][0]["summary"] == "direct reply, no retrieval"
 
 
-def test_decline_explains_the_scope() -> None:
-    update = make_decline_node()(state(route="out_of_scope"))
-
-    assert update["answer"] == OUT_OF_SCOPE_ANSWER
-    assert update["citations"] == []
-    assert update["trace"][0]["step"] == "decline"
-
-
 def test_build_question_graph_wires_real_nodes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, search: Search
 ) -> None:
@@ -185,6 +176,7 @@ def test_build_question_graph_wires_real_nodes(
         answer_model="fake:answer",
         embed_model="fake:e",
         rerank_model="fake:rr",
+        relevance_threshold=1,  # the fake search finds one chunk for this question
         cache_dir=tmp_path,
     )
     route_reply = {
@@ -192,8 +184,11 @@ def test_build_question_graph_wires_real_nodes(
         "parsed": RouteDecision(route="retrieve", reason="about MCP"),
     }
     built_models: list[str] = []
+    grade_reply = {"raw": AIMessage(content=""), "parsed": Grades(relevant=[1, 2], missing="")}
     router = RunnableLambda(lambda inputs: route_reply)
+    grader = RunnableLambda(lambda inputs: grade_reply)
     monkeypatch.setattr(build_module, "build_router", lambda s: router)
+    monkeypatch.setattr(build_module, "build_grader", lambda s: grader)
 
     def fake_chat_model(spec: str) -> RunnableLambda:
         built_models.append(spec)
@@ -203,7 +198,7 @@ def test_build_question_graph_wires_real_nodes(
 
     result = build_question_graph(settings, search).invoke(state())
 
-    assert built_models == ["fake:answer"]
-    assert [s["step"] for s in result["trace"]] == ["route", "retrieve", "answer"]
+    assert built_models == ["fake:router", "fake:answer"]  # rewrite uses the fast model
+    assert [s["step"] for s in result["trace"]] == ["route", "retrieve", "grade", "answer"]
     assert result["answer"] == "Use the refresh grant [1]."
     assert len(result["citations"]) == 1

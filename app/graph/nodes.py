@@ -161,20 +161,20 @@ def format_sources(docs: list[Document]) -> str:
     )
 
 
+def to_citation(number: int, doc: Document) -> Citation:
+    return Citation(
+        number=number,
+        chunk_id=doc.id,
+        heading_path=doc.metadata["heading_path"],
+        spec_version=doc.metadata["spec_version"],
+        source_url=doc.metadata["source_url"],
+    )
+
+
 def cited(answer: str, sources: list[Document]) -> list[Citation]:
     """Sources referenced as `[n]`, `[n][m]` or `[n, m]`, in number order."""
     numbers = {int(n) for group in CITATION_PATTERN.findall(answer) for n in group.split(",")}
-    return [
-        Citation(
-            number=n,
-            chunk_id=sources[n - 1].id,
-            heading_path=sources[n - 1].metadata["heading_path"],
-            spec_version=sources[n - 1].metadata["spec_version"],
-            source_url=sources[n - 1].metadata["source_url"],
-        )
-        for n in sorted(numbers)
-        if 1 <= n <= len(sources)
-    ]
+    return [to_citation(n, sources[n - 1]) for n in sorted(numbers) if 1 <= n <= len(sources)]
 
 
 def make_answer_node(llm: Runnable[Any, BaseMessage], versions: SpecVersions) -> Node:
@@ -211,19 +211,142 @@ def make_answer_node(llm: Runnable[Any, BaseMessage], versions: SpecVersions) ->
     return answer
 
 
+class Grades(BaseModel):
+    relevant: list[int] = Field(
+        description="Numbers of the sources that help answer the question. Empty if none do."
+    )
+    missing: str = Field(
+        description=(
+            "What the question needs that the relevant sources do not provide, in a few "
+            "words. Empty if they cover it."
+        )
+    )
+
+
+GRADE_SYSTEM = """\
+You check search results for a question about the Model Context Protocol (MCP) \
+documentation. For each numbered source, decide whether it contains information that \
+helps answer the question, directly or as essential context. Be strict: sharing a \
+topic or keyword is not enough. Then say briefly what the question needs that the \
+relevant sources do not provide."""
+
+GRADE_PROMPT = ChatPromptTemplate.from_messages(
+    [("system", GRADE_SYSTEM), ("human", "Question: {question}\n\nSources:\n\n{sources}")]
+)
+
+REWRITE_SYSTEM = """\
+You rewrite search queries for the Model Context Protocol (MCP) documentation. The \
+previous query did not find enough relevant passages. Write one new query that uses \
+precise MCP terms (message names such as `tools/call`, capability names, spec section \
+names) and targets what was missing. Reply with the query only."""
+
+REWRITE_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        ("system", REWRITE_SYSTEM),
+        ("human", "Question: {question}\nPrevious query: {query}\nWhat was missing: {missing}"),
+    ]
+)
+
+
+def build_grader(settings: Settings) -> Runnable[dict[str, str], dict[str, Any]]:
+    """Prompt | `ROUTER_MODEL` (the fast tier) grading every chunk in one call."""
+    llm = chat_model(settings.router_model)
+    return GRADE_PROMPT | llm.with_structured_output(Grades, include_raw=True)
+
+
+def make_grade_node(grader: Runnable[dict[str, str], dict[str, Any]]) -> Node:
+    """One call grades all chunks. An unparseable reply keeps every chunk."""
+
+    def grade(state: GraphState) -> dict[str, Any]:
+        started = time.monotonic()
+        docs = state.get("documents", [])
+        if not docs:
+            return {
+                "grades": [],
+                "missing": "no results",
+                "trace": [trace_step("grade", "no chunks to grade", started)],
+            }
+
+        reply = grader.invoke({"question": state["question"], "sources": format_sources(docs)})
+        parsed: Grades | None = reply["parsed"]
+        relevant = set(parsed.relevant) if parsed else set(range(1, len(docs) + 1))
+        grades = [n in relevant for n in range(1, len(docs) + 1)]
+        missing = parsed.missing.strip() if parsed else ""
+        summary = f"{sum(grades)} of {len(docs)} chunks relevant"
+        if not parsed:
+            summary += " (grader reply unparseable, so all kept)"
+        if missing:
+            summary += f"; missing: {missing}"
+        return {
+            "grades": grades,
+            "missing": missing,
+            "trace": [trace_step("grade", summary, started, reply["raw"])],
+        }
+
+    return grade
+
+
+def make_rewrite_node(llm: Runnable[Any, BaseMessage]) -> Node:
+    chain = REWRITE_PROMPT | llm
+
+    def rewrite(state: GraphState) -> dict[str, Any]:
+        started = time.monotonic()
+        reply = chain.invoke(
+            {
+                "question": state["question"],
+                "query": state["query"],
+                "missing": state.get("missing") or "not stated",
+            }
+        )
+        query = reply.text.strip().strip('"').strip() or state["question"]
+        rewrites = state.get("rewrites", 0) + 1
+        return {
+            "query": query,
+            "rewrites": rewrites,
+            "trace": [trace_step("rewrite", f"rewrite {rewrites}: {query!r}", started, reply)],
+        }
+
+    return rewrite
+
+
 OUT_OF_SCOPE_ANSWER = (
     "That is outside what I can help with: I only answer questions about the Model "
     "Context Protocol, from its documentation at modelcontextprotocol.io."
 )
+CLOSEST_SECTIONS = 3
 
 
-def make_decline_node() -> Node:
+def make_decline_node(versions: SpecVersions) -> Node:
+    """Out of scope: say so. In scope but not covered: say so and list the closest sections."""
+
     def decline(state: GraphState) -> dict[str, Any]:
         started = time.monotonic()
+        if state.get("route") == "out_of_scope":
+            return {
+                "answer": OUT_OF_SCOPE_ANSWER,
+                "citations": [],
+                "trace": [trace_step("decline", "out of scope", started)],
+            }
+
+        docs = state.get("documents", [])[:CLOSEST_SECTIONS]
+        closest = [to_citation(n, doc) for n, doc in enumerate(docs, start=1)]
+        searches = state.get("rewrites", 0) + 1
+        plural = "es" if searches > 1 else ""
+        version = describe_version(state["spec_version"], versions)
+        lines = [
+            f"The MCP docs for {version} don't cover this: {searches} search{plural} "
+            "found too few relevant sections."
+        ]
+        if closest:
+            lines += ["", "The closest sections found:"]
+            lines += [
+                f"- [{c['number']}] {c['heading_path']} ({c['spec_version']})" for c in closest
+            ]
+        summary = f"not covered after {searches} search{plural}; {len(closest)} closest sections"
         return {
-            "answer": OUT_OF_SCOPE_ANSWER,
-            "citations": [],
-            "trace": [trace_step("decline", "out of scope", started)],
+            "answer": "\n".join(lines),
+            "citations": closest,
+            "trace": [trace_step("decline", summary, started)],
         }
 
     return decline
