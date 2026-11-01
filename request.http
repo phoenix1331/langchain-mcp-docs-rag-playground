@@ -1,0 +1,36 @@
+@baseUrl = http://localhost:8000
+
+### Health
+
+# Liveness check used by the smoke test; no database or model calls.
+GET {{baseUrl}}/health
+
+### Chat page
+
+# The chat page with the spec version picker (newest version selected).
+GET {{baseUrl}}/
+
+### Ask
+
+# Ask a question about the latest spec version (use the newest dated version from the picker).
+# Returns the HTML fragment HTMX swaps into the page. Uses 3 model calls typically.
+POST {{baseUrl}}/ask
+Content-Type: application/x-www-form-urlencoded
+
+question=How does a client refresh an OAuth access token?&version=2026-07-28
+
+###
+
+# Search every spec version.
+POST {{baseUrl}}/ask
+Content-Type: application/x-www-form-urlencoded
+
+question=What changed in how servers declare tools?&version=all
+
+###
+
+# Validation: an unknown version returns a 422 error fragment without calling any model.
+POST {{baseUrl}}/ask
+Content-Type: application/x-www-form-urlencoded
+
+question=What is sampling?&version=1999-01-01

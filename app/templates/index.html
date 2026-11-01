@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<form class="ask" hx-post="/ask" hx-target="#answer" hx-swap="innerHTML"
+      hx-indicator="#working" hx-disabled-elt="find button">
+  <label class="visually-hidden" for="question">Question</label>
+  <textarea id="question" name="question" rows="3" maxlength="{{ max_chars }}" required
+            placeholder="e.g. How does a client refresh an OAuth access token?"></textarea>
+  <div class="ask-controls">
+    <label for="version">Spec version</label>
+    <select id="version" name="version">
+      {% for version in versions %}
+      <option value="{{ version }}" {% if version == latest %}selected{% endif %}>
+        {{ version }}{% if version == latest %} (latest){% endif %}
+      </option>
+      {% endfor %}
+      <option value="{{ all }}">All versions</option>
+    </select>
+    <button type="submit">Ask</button>
+  </div>
+</form>
+
+<p id="working" class="working" role="status">
+  Routing, searching, grading and writing the answer...
+</p>
+
+<section id="answer" aria-live="polite"></section>
+{% endblock %}

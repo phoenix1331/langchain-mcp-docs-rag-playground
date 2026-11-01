@@ -1,5 +1,6 @@
 .DEFAULT_GOAL := help
-.PHONY: help install db-setup db-check ingest query ask test coverage lint format
+PORT ?= 8000
+.PHONY: help install db-setup db-check ingest query ask dev test coverage lint format
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -22,6 +23,9 @@ query: ## Inspect retrieval: make query Q="your question" [ARGS="--version all -
 
 ask: ## Answer a question through the graph: make ask Q="your question" [ARGS="--version all"]
 	@uv run ask $(ARGS) "$(Q)"
+
+dev: ## Run the web app with auto-reload (PORT, default 8000)
+	@uv run uvicorn app.main:app --reload --port $(PORT)
 
 test: ## Run the test suite
 	@uv run pytest
