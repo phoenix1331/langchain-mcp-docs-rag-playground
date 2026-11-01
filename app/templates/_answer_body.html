@@ -20,4 +20,22 @@
   </ol>
 </section>
 {% endif %}
-<p class="answer-meta">{{ steps }} steps, {{ "%.1f" | format(seconds) }}s, {{ tokens }} tokens</p>
+<details class="trace">
+  <summary>How I got this answer <span class="trace-totals">{{ steps }} steps, {{ "%.1f" | format(seconds) }}s, {{ tokens }} tokens</span></summary>
+  <ol>
+    {% for step in trace %}
+    <li>
+      <p class="trace-step">
+        <span class="trace-name">{{ step.step }}</span>
+        <span class="trace-cost">{{ "%.1f" | format(step.ms / 1000) }}s{% if step.tokens %}, {{ step.tokens }} tokens{% endif %}</span>
+      </p>
+      <p class="trace-summary">{{ step.summary }}</p>
+      {% if step.details %}
+      <ul class="trace-details">
+        {% for detail in step.details %}<li>{{ detail }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</details>

@@ -24,7 +24,13 @@ RESULT: dict[str, Any] = {
     ],
     "trace": [
         {"step": "route", "summary": "retrieve: about MCP", "ms": 900, "tokens": 200},
-        {"step": "retrieve", "summary": "6 chunks", "ms": 1400, "tokens": 0},
+        {
+            "step": "retrieve",
+            "summary": "6 chunks",
+            "ms": 1400,
+            "tokens": 0,
+            "details": ["Auth › Refresh (2026-07-28) · rerank 0.71"],
+        },
         {"step": "answer", "summary": "cited 1 of 6 sources", "ms": 3200, "tokens": 2100},
     ],
 }
@@ -83,6 +89,7 @@ def test_ask_prints_answer_sources_and_trace(
     assert "  [1] 2026-07-28  Auth › Refresh\n      https://example.test/a" in out
     assert "  route       0.9s    200 tok  retrieve: about MCP" in out
     assert "  total 5.5s, 2300 tokens" in out
+    assert "6 chunks\n      - Auth › Refresh (2026-07-28) · rerank 0.71\n" in out
     assert wired["graph"].inputs == [
         {"question": "How are tokens refreshed?", "spec_version": "2026-07-28"}
     ]

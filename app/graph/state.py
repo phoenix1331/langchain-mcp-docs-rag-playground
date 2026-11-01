@@ -15,6 +15,7 @@ class TraceStep(TypedDict):
     summary: str
     ms: int
     tokens: int
+    details: list[str]  # extra lines for the trace panel, e.g. one per chunk
 
 
 class Citation(TypedDict):
@@ -43,7 +44,13 @@ class GraphState(GraphInput):
     trace: NotRequired[Annotated[list[TraceStep], operator.add]]  # nodes append, never replace
 
 
-def trace_step(step: str, summary: str, started: float, message: object = None) -> TraceStep:
+def trace_step(
+    step: str,
+    summary: str,
+    started: float,
+    message: object = None,
+    details: list[str] | None = None,
+) -> TraceStep:
     """A trace entry timed from `started` (`time.monotonic()`), with tokens from an LLM reply."""
     tokens = 0
     if isinstance(message, AIMessage) and message.usage_metadata:
@@ -53,4 +60,5 @@ def trace_step(step: str, summary: str, started: float, message: object = None) 
         summary=summary,
         ms=round((time.monotonic() - started) * 1000),
         tokens=tokens,
+        details=details or [],
     )

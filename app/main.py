@@ -209,6 +209,7 @@ def create_app(services_factory: Callable[[], Services] = build_services) -> Fas
             trace = final.get("trace", [])
             context = {
                 "result": final,
+                "trace": trace,
                 "citations": final.get("citations", []),
                 "declined": bool(trace) and trace[-1]["step"] == "decline",
                 "source_base": f"{services.repo_url}/blob/main/",

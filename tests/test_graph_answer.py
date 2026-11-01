@@ -14,6 +14,7 @@ from app.graph.nodes import (
     Grades,
     RouteDecision,
     cited,
+    describe_chunk,
     describe_version,
     format_sources,
     make_answer_node,
@@ -66,8 +67,21 @@ def test_retrieve_searches_the_current_query(search: Search) -> None:
 
     assert update["documents"]
     assert all("relevance_score" in d.metadata for d in update["documents"])
-    assert update["trace"][0]["step"] == "retrieve"
-    assert "for 'refresh token' (hybrid + rerank)" in update["trace"][0]["summary"]
+    [step] = update["trace"]
+    assert step["step"] == "retrieve"
+    assert "for 'refresh token' (hybrid + rerank)" in step["summary"]
+    assert len(step["details"]) == len(update["documents"])
+    assert all(" · rerank " in detail for detail in step["details"])
+
+
+def test_describe_chunk_includes_scores_and_ranks_when_present() -> None:
+    plain = doc("a", heading="Auth › Refresh")
+    extra = {"relevance_score": 0.714, "ranks": {"bm25": 4, "vector": 1}}
+    scored = plain.model_copy(update={"metadata": {**plain.metadata, **extra}})
+
+    assert describe_chunk(plain) == "Auth › Refresh (2026-07-28)"
+    expected = "Auth › Refresh (2026-07-28) · rerank 0.71 · bm25 #4, vector #1"
+    assert describe_chunk(scored) == expected
 
 
 def test_retrieve_mode_and_rerank_are_configurable(search: Search) -> None:

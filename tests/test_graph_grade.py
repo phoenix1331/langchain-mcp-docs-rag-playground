@@ -50,6 +50,12 @@ def test_grade_marks_each_chunk_in_one_call() -> None:
     [step] = update["trace"]
     assert step["summary"] == "2 of 4 chunks relevant; missing: the HTTP request"
     assert step["tokens"] == 55
+    assert step["details"] == [
+        "relevant: Auth › Refresh (2026-07-28)",
+        "not relevant: Base › Page (2026-07-28)",
+        "relevant: Base › Page (2026-07-28)",
+        "not relevant: Base › Page (2026-07-28)",
+    ]
 
 
 def test_grade_keeps_everything_when_the_reply_is_unparseable() -> None:

@@ -152,8 +152,6 @@ main, .site-header {
 .answer-body table { border-collapse: collapse; display: block; overflow-x: auto; }
 .answer-body th, .answer-body td { border: 1px solid var(--border); padding: 0.3rem 0.6rem; }
 
-.answer-meta { color: var(--muted); font-size: 0.85rem; }
-
 .cite {
   color: var(--accent);
   font-weight: 600;
@@ -261,4 +259,49 @@ main, .site-header {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.trace {
+  margin: 1rem 0 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.trace summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.trace-totals {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.trace ol {
+  margin: 0.75rem 0 0;
+  padding: 0 0 0 1rem;
+  border-left: 2px solid var(--border);
+  list-style: none;
+}
+
+.trace ol > li { margin-bottom: 0.75rem; }
+
+.trace-step {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+}
+
+.trace-name { font-weight: 600; text-transform: capitalize; }
+.trace-cost { color: var(--muted); }
+.trace-summary { margin: 0.1rem 0 0; overflow-wrap: anywhere; }
+
+.trace-details {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }

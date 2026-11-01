@@ -74,6 +74,17 @@ def make_route_node(router: Runnable[dict[str, str], dict[str, Any]]) -> Node:
     return route
 
 
+def describe_chunk(doc: Document) -> str:
+    """Heading and version, plus the rerank score and per-retriever ranks when present."""
+    meta = doc.metadata
+    parts = [f"{meta['heading_path']} ({meta['spec_version']})"]
+    if "relevance_score" in meta:
+        parts.append(f"rerank {meta['relevance_score']:.2f}")
+    if meta.get("ranks"):
+        parts.append(", ".join(f"{name} #{rank}" for name, rank in meta["ranks"].items()))
+    return " · ".join(parts)
+
+
 def make_retrieve_node(search: Search, mode: Mode = Mode.HYBRID, rerank: bool = True) -> Node:
     """Search the selected version (plus unversioned pages) for the current query."""
 
@@ -82,7 +93,9 @@ def make_retrieve_node(search: Search, mode: Mode = Mode.HYBRID, rerank: bool = 
         docs = search.retriever(state["spec_version"], mode, rerank).invoke(state["query"])
         how = f"{mode} + rerank" if rerank else str(mode)
         summary = f"{len(docs)} chunks for {state['query']!r} ({how})"
-        return {"documents": docs, "trace": [trace_step("retrieve", summary, started)]}
+        details = [describe_chunk(doc) for doc in docs]
+        step = trace_step("retrieve", summary, started, details=details)
+        return {"documents": docs, "trace": [step]}
 
     return retrieve
 
@@ -278,10 +291,15 @@ def make_grade_node(grader: Runnable[dict[str, str], dict[str, Any]]) -> Node:
             summary += " (grader reply unparseable, so all kept)"
         if missing:
             summary += f"; missing: {missing}"
+        details = [
+            f"{'relevant' if relevant else 'not relevant'}: "
+            f"{doc.metadata['heading_path']} ({doc.metadata['spec_version']})"
+            for doc, relevant in zip(docs, grades, strict=True)
+        ]
         return {
             "grades": grades,
             "missing": missing,
-            "trace": [trace_step("grade", summary, started, reply["raw"])],
+            "trace": [trace_step("grade", summary, started, reply["raw"], details)],
         }
 
     return grade

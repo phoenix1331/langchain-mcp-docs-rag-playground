@@ -32,7 +32,14 @@ RESULT = {
     "citations": [CITATION],
     "trace": [
         {"step": "route", "summary": "", "ms": 900, "tokens": 200},
-        {"step": "answer", "summary": "", "ms": 1600, "tokens": 1000},
+        {
+            "step": "grade",
+            "summary": "1 of 2 chunks relevant",
+            "ms": 0,
+            "tokens": 0,
+            "details": ["relevant: Auth › Refresh", "not relevant: <b>Other</b>"],
+        },
+        {"step": "answer", "summary": "cited 1", "ms": 1600, "tokens": 1000},
     ],
 }
 
@@ -172,7 +179,13 @@ def test_stream_sends_stages_tokens_then_the_rendered_answer(
     assert f'href="{CITATION["source_url"]}"' in done
     assert f'href="{DEFAULT_REPO_URL}/blob/main/{CITATION["source_path"]}"' in done
     assert "<script>" not in done  # model output cannot inject markup
-    assert "2 steps, 2.5s, 1200 tokens" in done
+    assert '<details class="trace">' in done
+    assert "3 steps, 2.5s, 1200 tokens" in done
+    assert '<span class="trace-name">grade</span>' in done
+    assert "<li>relevant: Auth › Refresh</li>" in done
+    assert "&lt;b&gt;Other&lt;/b&gt;" in done  # details are escaped
+    assert "0.0s</span>" in done  # no token count when a step used none
+    assert '<p class="trace-summary">cited 1</p>' in done
 
 
 def test_stream_reports_validation_errors_as_done(client: TestClient, graph: FakeGraph) -> None:

@@ -62,8 +62,10 @@ def test_router_receives_the_question() -> None:
     assert seen == [{"question": "hello"}]
 
 
-def test_trace_step_without_usage_has_zero_tokens() -> None:
+def test_trace_step_without_usage_has_zero_tokens_and_no_details() -> None:
     assert trace_step("x", "y", 0.0)["tokens"] == 0
+    assert trace_step("x", "y", 0.0)["details"] == []
+    assert trace_step("x", "y", 0.0, details=["a"])["details"] == ["a"]
     assert trace_step("x", "y", 0.0, AIMessage(content="no usage"))["tokens"] == 0
 
 

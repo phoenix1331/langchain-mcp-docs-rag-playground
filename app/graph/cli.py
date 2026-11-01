@@ -43,6 +43,7 @@ def format_trace(trace: list[TraceStep]) -> str:
             f"  {step['step']:<{width}}  {step['ms'] / 1000:5.1f}s  {step['tokens']:>5} tok"
             f"  {step['summary']}"
         )
+        lines.extend(f"      - {detail}" for detail in step.get("details", []))
     total_ms = sum(step["ms"] for step in trace)
     total_tokens = sum(step["tokens"] for step in trace)
     lines.append(f"  total {total_ms / 1000:.1f}s, {total_tokens} tokens")
