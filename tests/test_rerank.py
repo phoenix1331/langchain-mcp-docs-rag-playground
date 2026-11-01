@@ -1,14 +1,12 @@
 import asyncio
 from collections.abc import Sequence
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from langchain_core.documents import Document
 from pydantic import SecretStr
 
-from app.config import MissingSecretError, Settings
-from app.retrieval.rerank import VoyageReranker, build_reranker
+from app.retrieval.rerank import VoyageReranker
 from tests.retrieval_fakes import doc
 
 
@@ -52,28 +50,3 @@ def test_async_rerank_keeps_ids(reranker: VoyageReranker) -> None:
 def test_empty_candidates_skip_the_api(reranker: VoyageReranker) -> None:
     assert reranker.compress_documents([], "q") == []
     assert asyncio.run(reranker.acompress_documents([], "q")) == []
-
-
-def settings(tmp_path: Path, key: str | None) -> Settings:
-    return Settings(
-        _env_file=None,
-        database_url="postgresql+psycopg://u:p@localhost/db",
-        router_model="r",
-        answer_model="a",
-        embed_model="e",
-        rerank_model="rerank-test",
-        rerank_top_n=4,
-        voyage_api_key=SecretStr(key) if key else None,
-        cache_dir=tmp_path,
-    )
-
-
-def test_build_reranker_uses_config(tmp_path: Path) -> None:
-    built = build_reranker(settings(tmp_path, "key"))
-
-    assert (built.model, built.top_k) == ("rerank-test", 4)
-
-
-def test_build_reranker_needs_a_key(tmp_path: Path) -> None:
-    with pytest.raises(MissingSecretError, match="VOYAGE_API_KEY"):
-        build_reranker(settings(tmp_path, None))

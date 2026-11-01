@@ -7,8 +7,9 @@ from dataclasses import dataclass
 
 from langchain_core.embeddings import Embeddings
 
-from app.config import MissingSecretError, Settings, get_settings
+from app.config import Settings, get_settings
 from app.db import make_engine
+from app.models import ModelConfigError
 from app.retrieval.bm25 import SNAPSHOT_NAME, stored_chunks, write_snapshot
 from ingest.embeddings import build_ingest_embeddings
 from ingest.fetch import FetchError, discover_versions, sync_repo
@@ -17,6 +18,7 @@ from ingest.index import (
     build_record_manager,
     build_vector_store,
     check_dimensions,
+    collection_name,
     index_chunks,
 )
 from ingest.load import load_documents
@@ -71,16 +73,18 @@ def run_ingest(
         log(f"  rate limited by the API; waiting a minute (retry {attempt})")
 
     embeddings = build_ingest_embeddings(settings, inner_embeddings, on_batch, on_retry)
+    collection = collection_name(settings.embed_model, settings.embed_dimensions)
     engine = make_engine(settings.database_url)
     try:
         check_dimensions(engine, settings.embed_dimensions)
         result = index_chunks(
             chunks,
-            build_record_manager(engine),
-            build_vector_store(engine, embeddings, settings.embed_dimensions),
+            build_record_manager(engine, collection),
+            build_vector_store(engine, embeddings, settings.embed_dimensions, collection),
+            collection,
             on_progress=lambda n: log(f"indexed {n}/{len(chunks)} chunks"),
         )
-        stored = stored_chunks(engine)
+        stored = stored_chunks(engine, collection)
     finally:
         engine.dispose()
 
@@ -120,7 +124,7 @@ def format_summary(summary: IngestSummary) -> str:
 def main() -> int:
     try:
         summary = run_ingest(get_settings())
-    except (FetchError, MissingSecretError, DimensionMismatchError) as exc:
+    except (FetchError, ModelConfigError, DimensionMismatchError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     print(format_summary(summary))

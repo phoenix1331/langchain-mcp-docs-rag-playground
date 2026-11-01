@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 import pytest
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
-from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
@@ -34,28 +33,31 @@ def test_vector_retriever_passes_k_and_filter() -> None:
     )
 
 
-def test_query_vector_store_uses_voyage_by_default(
+def test_query_vector_store_uses_the_configured_model_and_collection(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     settings = Settings(
         _env_file=None,
         database_url="postgresql+psycopg://u:p@localhost/db",
-        router_model="r",
-        answer_model="a",
-        embed_model="voyage-test",
-        rerank_model="rr",
-        voyage_api_key=SecretStr("key"),
+        router_model="fake:r",
+        answer_model="fake:a",
+        embed_model="voyageai:voyage-test",
+        rerank_model="fake:rr",
         embed_dimensions=16,
         cache_dir=tmp_path,
     )
-    calls: list[tuple[object, object, int]] = []
-    monkeypatch.setattr(vector, "voyage_embeddings", lambda s: "voyage")
-    monkeypatch.setattr(vector, "build_vector_store", lambda e, emb, d: calls.append((e, emb, d)))
+    calls: list[tuple[object, ...]] = []
+    monkeypatch.setattr(vector, "embedding_model", lambda spec, dims: f"{spec}/{dims}")
+    monkeypatch.setattr(vector, "build_vector_store", lambda *args: calls.append(args))
 
     query_vector_store(settings, "engine")  # type: ignore[arg-type]
     query_vector_store(settings, "engine", "fake")  # type: ignore[arg-type]
 
-    assert calls == [("engine", "voyage", 16), ("engine", "fake", 16)]
+    collection = "mcp_docs-voyageai-voyage-test-16"
+    assert calls == [
+        ("engine", "voyageai:voyage-test/16", 16, collection),
+        ("engine", "fake", 16, collection),
+    ]
 
 
 @pytest.mark.db

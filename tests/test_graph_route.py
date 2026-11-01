@@ -4,9 +4,8 @@ from typing import Any
 import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableLambda
-from pydantic import SecretStr
 
-from app.config import MissingSecretError, Settings
+from app.config import Settings
 from app.graph.build import ROUTE_TARGETS, Nodes, build_graph
 from app.graph.nodes import ROUTE_PROMPT, RouteDecision, build_router, make_route_node
 from app.graph.state import GraphState, trace_step
@@ -99,26 +98,24 @@ def test_every_route_has_a_target() -> None:
     assert set(ROUTE_TARGETS) == set(RouteDecision.model_fields["route"].annotation.__args__)  # type: ignore[union-attr]
 
 
-def settings(tmp_path: Path, key: str | None) -> Settings:
+def settings(tmp_path: Path) -> Settings:
     return Settings(
         _env_file=None,
         database_url="postgresql+psycopg://u:p@localhost/db",
-        router_model="flash-test",
-        answer_model="a",
-        embed_model="e",
-        rerank_model="rr",
-        google_api_key=SecretStr(key) if key else None,
+        router_model="google_genai:flash-test",
+        answer_model="fake:a",
+        embed_model="fake:e",
+        rerank_model="fake:rr",
         cache_dir=tmp_path,
     )
 
 
-def test_build_router_chains_prompt_and_configured_model(tmp_path: Path) -> None:
-    router = build_router(settings(tmp_path, "key"))
+def test_build_router_chains_prompt_and_configured_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("GOOGLE_API_KEY", "key")
+
+    router = build_router(settings(tmp_path))
 
     assert router.first is ROUTE_PROMPT  # type: ignore[attr-defined]
     assert "flash-test" in repr(router)
-
-
-def test_build_router_needs_a_key(tmp_path: Path) -> None:
-    with pytest.raises(MissingSecretError, match="GOOGLE_API_KEY"):
-        build_router(settings(tmp_path, None))

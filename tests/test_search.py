@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_classic.retrievers import ContextualCompressionRetriever
-from pydantic import SecretStr
 
 from app.config import Settings
 from app.retrieval import search as search_module
@@ -61,23 +60,22 @@ def test_from_settings_wires_resources(tmp_path: Path, monkeypatch: pytest.Monke
     settings = Settings(
         _env_file=None,
         database_url="postgresql+psycopg://u:p@localhost/db",
-        router_model="r",
-        answer_model="a",
-        embed_model="e",
-        rerank_model="rr",
-        voyage_api_key=SecretStr("key"),
+        router_model="fake:r",
+        answer_model="fake:a",
+        embed_model="fake:e",
+        rerank_model="fake:rr",
         top_k=9,
         cache_dir=tmp_path,
     )
     monkeypatch.setattr(search_module.KeywordIndex, "load", lambda cache_dir: "keyword")
     monkeypatch.setattr(search_module, "query_vector_store", lambda s, e: "store")
-    monkeypatch.setattr(search_module, "build_reranker", lambda s: "reranker")
+    monkeypatch.setattr(search_module, "build_reranker", lambda spec, n: f"{spec}/{n}")
 
     built = Search.from_settings(settings, MagicMock())
 
     assert (built.keyword, built.store, built.reranker, built.top_k) == (
         "keyword",
         "store",
-        "reranker",
+        "fake:rr/6",
         9,
     )

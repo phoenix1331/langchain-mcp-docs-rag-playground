@@ -1,16 +1,18 @@
+import os
 from pathlib import Path
 
 import pytest
-from pydantic import SecretStr, ValidationError
+from pydantic import ValidationError
 
-from app.config import MissingSecretError, Settings, get_settings, require_secret
+from app import config
+from app.config import Settings, get_settings
 
 REQUIRED = {
     "DATABASE_URL": "postgresql+psycopg://u:p@localhost:5432/db",
-    "ROUTER_MODEL": "router-model",
-    "ANSWER_MODEL": "answer-model",
-    "EMBED_MODEL": "embed-model",
-    "RERANK_MODEL": "rerank-model",
+    "ROUTER_MODEL": "google_genai:router-model",
+    "ANSWER_MODEL": "anthropic:answer-model",
+    "EMBED_MODEL": "voyageai:embed-model",
+    "RERANK_MODEL": "voyageai:rerank-model",
 }
 
 
@@ -24,10 +26,9 @@ def env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
 def test_loads_required_values_and_defaults(env: pytest.MonkeyPatch) -> None:
     settings = Settings(_env_file=None)
 
-    assert settings.router_model == "router-model"
+    assert settings.router_model == "google_genai:router-model"
     assert settings.rerank_top_n == 6
     assert settings.max_rewrites == 2
-    assert settings.google_api_key is None
 
 
 def test_thresholds_are_read_from_environment(env: pytest.MonkeyPatch) -> None:
@@ -56,14 +57,35 @@ def test_rejects_invalid_thresholds(env: pytest.MonkeyPatch) -> None:
         Settings(_env_file=None)
 
 
-def test_require_secret_returns_value() -> None:
-    assert require_secret(SecretStr("abc"), "X_KEY") == "abc"
+@pytest.mark.parametrize("spec", ["gemini-3.6-flash", "Google:x", "google_genai:", ":model"])
+def test_model_settings_must_be_provider_and_model(env: pytest.MonkeyPatch, spec: str) -> None:
+    env.setenv("ROUTER_MODEL", spec)
+
+    with pytest.raises(ValidationError, match="router_model"):
+        Settings(_env_file=None)
 
 
-@pytest.mark.parametrize("value", [None, SecretStr("")])
-def test_require_secret_names_missing_variable(value: SecretStr | None) -> None:
-    with pytest.raises(MissingSecretError, match="VOYAGE_API_KEY"):
-        require_secret(value, "VOYAGE_API_KEY")
+def test_model_names_may_contain_colons(env: pytest.MonkeyPatch) -> None:
+    env.setenv("ANSWER_MODEL", "ollama:llama3.2:3b")
+
+    assert Settings(_env_file=None).answer_model == "ollama:llama3.2:3b"
+
+
+def test_get_settings_exports_env_file_for_integrations(
+    env: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("SOME_PROVIDER_API_KEY=from-dotenv\n")
+    env.setattr(config, "ENV_FILE", env_file)
+    # Registering the variable with monkeypatch means it is removed again after the test.
+    env.setenv("SOME_PROVIDER_API_KEY", "placeholder")
+    env.delenv("SOME_PROVIDER_API_KEY")
+    get_settings.cache_clear()
+
+    get_settings()
+
+    assert os.environ["SOME_PROVIDER_API_KEY"] == "from-dotenv"
+    get_settings.cache_clear()
 
 
 def test_get_settings_is_cached(env: pytest.MonkeyPatch) -> None:

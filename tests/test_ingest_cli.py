@@ -8,9 +8,9 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding, Embeddings
 from langchain_core.indexing import InMemoryRecordManager
 from langchain_core.vectorstores import InMemoryVectorStore
-from pydantic import SecretStr
 
-from app.config import MissingSecretError, Settings
+from app.config import Settings
+from app.models import ModelConfigError
 from app.retrieval.bm25 import SNAPSHOT_NAME, read_snapshot
 from ingest import cli
 from ingest.cli import IngestSummary, format_summary, run_ingest
@@ -24,11 +24,10 @@ def make_settings(tmp_path: Path) -> Settings:
     return Settings(
         _env_file=None,
         database_url="postgresql+psycopg://u:p@localhost/db",
-        router_model="r",
-        answer_model="a",
-        embed_model="fake",
-        rerank_model="rr",
-        voyage_api_key=SecretStr("key"),
+        router_model="fake:r",
+        answer_model="fake:a",
+        embed_model="fake:fake",
+        rerank_model="fake:rr",
         cache_dir=tmp_path,
     )
 
@@ -49,17 +48,20 @@ def fake_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Settings:
     engine = MagicMock()
     monkeypatch.setattr(cli, "sync_repo", lambda url, dest: "abc123def4567890")
     monkeypatch.setattr(cli, "make_engine", lambda url: engine)
-    monkeypatch.setattr(cli, "build_record_manager", lambda e: manager)
+    monkeypatch.setattr(cli, "build_record_manager", lambda e, collection: manager)
     monkeypatch.setattr(cli, "check_dimensions", lambda e, dims: None)
     stores: list[InMemoryVectorStore] = []
 
-    def build_store(engine: object, emb: Embeddings, dims: int) -> InMemoryVectorStore:
+    def build_store(
+        engine: object, emb: Embeddings, dims: int, collection: str
+    ) -> InMemoryVectorStore:
+        assert collection == "mcp_docs-fake-fake-1024"
         stores.append(InMemoryVectorStore(emb))
         if len(stores) > 1:
             stores[-1].store = stores[0].store  # same "database" across runs
         return stores[-1]
 
-    def stored(engine: object) -> list[Document]:
+    def stored(engine: object, collection: str) -> list[Document]:
         return [
             Document(id=key, page_content=row["text"], metadata=row["metadata"])
             for key, row in stores[0].store.items()
@@ -125,7 +127,7 @@ def test_main_prints_summary(
     "error",
     [
         FetchError("git clone failed: nope"),
-        MissingSecretError("VOYAGE_API_KEY is not set"),
+        ModelConfigError("no reranker for provider 'x'"),
         DimensionMismatchError("vector(8) but EMBED_DIMENSIONS is 1024"),
     ],
 )

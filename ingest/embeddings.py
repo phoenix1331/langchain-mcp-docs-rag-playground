@@ -1,7 +1,7 @@
 """Embedding wrappers: client-side rate limiting and a content-hash cache.
 
-Voyage without a payment method allows 3 requests and 10K tokens per minute. The
-rate limiter keeps ingestion under configured limits instead of failing on 429s;
+Free tiers (Voyage without a payment method: 3 requests and 10K tokens per minute) are
+tight. The rate limiter keeps ingestion under configured limits instead of failing on 429s;
 the cache means text repeated across spec versions (or re-runs) is embedded once.
 """
 
@@ -15,11 +15,10 @@ import voyageai
 from langchain_classic.embeddings import CacheBackedEmbeddings
 from langchain_classic.storage import LocalFileStore
 from langchain_core.embeddings import Embeddings
-from langchain_voyageai import VoyageAIEmbeddings
-from pydantic import SecretStr
 from voyageai.error import RateLimitError
 
-from app.config import Settings, require_secret
+from app.config import Settings
+from app.models import VOYAGE, embeddings, parse_spec, slug
 
 WINDOW_SECONDS = 60.0
 CHARS_PER_TOKEN = 4  # rough fallback only: code-heavy text can run 2.5x higher
@@ -146,24 +145,15 @@ class RateLimitedEmbeddings(Embeddings):
         return self._request(self.count_tokens(text), lambda: self.inner.embed_query(text))
 
 
-def voyage_embeddings(settings: Settings) -> VoyageAIEmbeddings:
-    return VoyageAIEmbeddings(
-        model=settings.embed_model,
-        voyage_api_key=SecretStr(require_secret(settings.voyage_api_key, "VOYAGE_API_KEY")),
-        output_dimension=settings.embed_dimensions,
-        batch_size=1000,  # batching is done by RateLimitedEmbeddings
-    )
-
-
-def voyage_token_counter(settings: Settings) -> TokenCounter:
+def voyage_token_counter(model: str) -> TokenCounter:
     """Exact Voyage token counts, computed locally with the model's tokenizer."""
-    client = voyageai.Client(api_key=require_secret(settings.voyage_api_key, "VOYAGE_API_KEY"))
-    return lambda text: client.count_tokens([text], model=settings.embed_model)
+    client = voyageai.Client()  # reads VOYAGE_API_KEY
+    return lambda text: client.count_tokens([text], model=model)
 
 
 def cache_namespace(settings: Settings) -> str:
-    """Cache keys include the model and dimensions, so changing either re-embeds."""
-    return f"{settings.embed_model}-{settings.embed_dimensions}"
+    """Cache keys include the provider, model and dimensions, so changing any re-embeds."""
+    return f"{slug(settings.embed_model)}-{settings.embed_dimensions}"
 
 
 def build_ingest_embeddings(
@@ -172,19 +162,18 @@ def build_ingest_embeddings(
     on_batch: Callable[[int], None] | None = None,
     on_retry: Callable[[int], None] | None = None,
 ) -> CacheBackedEmbeddings:
-    """Cache(RateLimited(Voyage)): only cache misses reach the API, within rate limits.
+    """Cache(RateLimited(EMBED_MODEL)): only cache misses reach the API, within rate limits.
 
-    A custom `inner` (tests) uses the character-based token estimate; Voyage uses its
-    real tokenizer and retries on Voyage rate-limit errors.
+    Voyage batches are sized with its real tokenizer and retried on its rate-limit
+    errors. Other providers, and a custom `inner` (tests), use the character estimate.
     """
+    provider, name = parse_spec(settings.embed_model)
     count: TokenCounter = estimate_tokens
     retry_on: tuple[type[Exception], ...] = ()
+    if inner is None and provider == VOYAGE:
+        count, retry_on = voyage_token_counter(name), (RateLimitError,)
     if inner is None:
-        inner, count, retry_on = (
-            voyage_embeddings(settings),
-            voyage_token_counter(settings),
-            (RateLimitError,),
-        )
+        inner = embeddings(settings.embed_model, settings.embed_dimensions)
     limited = RateLimitedEmbeddings(
         inner,
         RateLimiter(settings.embed_rpm, settings.embed_tpm),

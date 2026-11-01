@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 from langchain_core.embeddings import DeterministicFakeEmbedding
-from pydantic import Field, SecretStr
+from pydantic import Field
 
-from app.config import MissingSecretError, Settings
+from app.config import Settings
 from ingest import embeddings as embeddings_module
 from ingest.embeddings import (
     RateLimitedEmbeddings,
@@ -13,7 +13,6 @@ from ingest.embeddings import (
     build_ingest_embeddings,
     cache_namespace,
     estimate_tokens,
-    voyage_embeddings,
     voyage_token_counter,
 )
 
@@ -47,11 +46,10 @@ def clock() -> FakeClock:
 def settings(tmp_path: Path, **overrides: object) -> Settings:
     values: dict[str, object] = {
         "database_url": "postgresql+psycopg://u:p@localhost/db",
-        "router_model": "r",
-        "answer_model": "a",
-        "embed_model": "voyage-test",
-        "rerank_model": "rr",
-        "voyage_api_key": SecretStr("key"),
+        "router_model": "fake:r",
+        "answer_model": "fake:a",
+        "embed_model": "voyageai:voyage-test",
+        "rerank_model": "fake:rr",
         "cache_dir": tmp_path,
     }
     return Settings(_env_file=None, **{**values, **overrides})
@@ -160,20 +158,8 @@ def test_rate_limited_embed_query_uses_the_limiter(clock: FakeClock) -> None:
     assert clock.sleeps == [60, 60]
 
 
-def test_voyage_embeddings_uses_settings(tmp_path: Path) -> None:
-    embeddings = voyage_embeddings(settings(tmp_path))
-
-    assert embeddings.model == "voyage-test"
-    assert embeddings.output_dimension == 1024
-
-
-def test_voyage_embeddings_requires_key(tmp_path: Path) -> None:
-    with pytest.raises(MissingSecretError, match="VOYAGE_API_KEY"):
-        voyage_embeddings(settings(tmp_path, voyage_api_key=None))
-
-
 def test_cache_namespace_includes_model_and_dimensions(tmp_path: Path) -> None:
-    assert cache_namespace(settings(tmp_path, embed_dimensions=512)) == "voyage-test-512"
+    assert cache_namespace(settings(tmp_path, embed_dimensions=512)) == "voyageai-voyage-test-512"
 
 
 def test_cache_only_sends_misses_to_the_api(tmp_path: Path) -> None:
@@ -245,16 +231,13 @@ def test_voyage_token_counter_uses_the_model(
     calls: list[tuple[list[str], str]] = []
 
     class FakeClient:
-        def __init__(self, api_key: str) -> None:
-            assert api_key == "key"
-
         def count_tokens(self, texts: list[str], model: str) -> int:
             calls.append((texts, model))
             return 42
 
     monkeypatch.setattr(embeddings_module.voyageai, "Client", FakeClient)
 
-    assert voyage_token_counter(settings(tmp_path))("hello") == 42
+    assert voyage_token_counter("voyage-test")("hello") == 42
     assert calls == [(["hello"], "voyage-test")]
 
 
@@ -262,8 +245,8 @@ def test_build_uses_voyage_counter_and_retries_by_default(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = DeterministicFakeEmbedding(size=8)
-    monkeypatch.setattr(embeddings_module, "voyage_embeddings", lambda s: fake)
-    monkeypatch.setattr(embeddings_module, "voyage_token_counter", lambda s: lambda text: 7)
+    monkeypatch.setattr(embeddings_module, "embeddings", lambda spec, dims: fake)
+    monkeypatch.setattr(embeddings_module, "voyage_token_counter", lambda name: lambda text: 7)
 
     built = build_ingest_embeddings(settings(tmp_path))
 
@@ -272,3 +255,24 @@ def test_build_uses_voyage_counter_and_retries_by_default(
     assert limited.inner is fake
     assert limited.count_tokens("anything") == 7
     assert limited.retry_on == (embeddings_module.RateLimitError,)
+
+
+def test_other_providers_use_the_estimate_and_no_retries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake = DeterministicFakeEmbedding(size=8)
+    seen: list[tuple[str, int]] = []
+
+    def build(spec: str, dims: int) -> DeterministicFakeEmbedding:
+        seen.append((spec, dims))
+        return fake
+
+    monkeypatch.setattr(embeddings_module, "embeddings", build)
+
+    built = build_ingest_embeddings(settings(tmp_path, embed_model="openai:text-embedding-3-small"))
+
+    limited = built.underlying_embeddings
+    assert isinstance(limited, RateLimitedEmbeddings)
+    assert seen == [("openai:text-embedding-3-small", 1024)]
+    assert limited.count_tokens is estimate_tokens
+    assert limited.retry_on == ()

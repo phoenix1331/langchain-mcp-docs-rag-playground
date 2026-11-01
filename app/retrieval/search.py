@@ -10,9 +10,9 @@ from langchain_core.vectorstores import VectorStore
 from sqlalchemy import Engine
 
 from app.config import Settings
+from app.models import reranker as build_reranker
 from app.retrieval.bm25 import KeywordIndex
 from app.retrieval.hybrid import HybridRetriever
-from app.retrieval.rerank import build_reranker
 from app.retrieval.scope import Scope, version_scope
 from app.retrieval.vector import query_vector_store, vector_retriever
 
@@ -37,7 +37,7 @@ class Search:
         return cls(
             keyword=KeywordIndex.load(settings.cache_dir),
             store=query_vector_store(settings, engine),
-            reranker=build_reranker(settings),
+            reranker=build_reranker(settings.rerank_model, settings.rerank_top_n),
             top_k=settings.top_k,
         )
 

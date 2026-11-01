@@ -1,5 +1,7 @@
 """Vector store, record manager and the LangChain indexing call."""
 
+import hashlib
+import json
 from collections.abc import Callable, Iterable, Iterator
 
 from langchain_classic.indexes import SQLRecordManager
@@ -10,12 +12,25 @@ from langchain_core.vectorstores import VectorStore
 from langchain_postgres import PGVector
 from sqlalchemy import Engine, text
 
-COLLECTION = "mcp_docs"
+from app.models import slug
+
+COLLECTION_PREFIX = "mcp_docs"
 SOURCE_ID_KEY = "source_path"
 BATCH_SIZE = 100
 
 
 EMBEDDING_TABLE = "langchain_pg_embedding"
+
+
+def collection_name(embed_model: str, dimensions: int) -> str:
+    """One collection per embedding model and size.
+
+    The record manager only re-embeds changed text, so switching models in place would
+    skip every chunk and leave the old model's vectors behind. A new name forces a full
+    index for the new model (repeated text still comes from the embedding cache) and
+    leaves the old collection untouched, so switching back is free.
+    """
+    return f"{COLLECTION_PREFIX}-{slug(embed_model)}-{dimensions}"
 
 
 class DimensionMismatchError(RuntimeError):
@@ -44,7 +59,7 @@ def check_dimensions(engine: Engine, expected: int) -> None:
 
 
 def build_vector_store(
-    engine: Engine, embeddings: Embeddings, dimensions: int, collection: str = COLLECTION
+    engine: Engine, embeddings: Embeddings, dimensions: int, collection: str
 ) -> PGVector:
     return PGVector(
         embeddings,
@@ -56,7 +71,7 @@ def build_vector_store(
     )
 
 
-def build_record_manager(engine: Engine, collection: str = COLLECTION) -> SQLRecordManager:
+def build_record_manager(engine: Engine, collection: str) -> SQLRecordManager:
     manager = SQLRecordManager(f"pgvector/{collection}", engine=engine)
     manager.create_schema()
     return manager
@@ -71,10 +86,28 @@ def _with_progress(
             on_progress(count)
 
 
+def collection_key_encoder(collection: str) -> Callable[[Document], str]:
+    """Chunk ids hash the collection with the content and metadata.
+
+    PGVector keeps every collection in one table keyed by id alone. With the indexing
+    API's default content hash, the same chunk indexed into a second collection would
+    upsert the first collection's row instead of adding its own, and cleanup deletes
+    (`PGVector.delete` is not collection-scoped by default) would remove other
+    collections' rows.
+    """
+
+    def encode(doc: Document) -> str:
+        payload = json.dumps([collection, doc.page_content, doc.metadata], sort_keys=True)
+        return hashlib.sha256(payload.encode()).hexdigest()
+
+    return encode
+
+
 def index_chunks(
     chunks: Iterable[Document],
     record_manager: RecordManager,
     vector_store: VectorStore,
+    collection: str,
     on_progress: Callable[[int], None] | None = None,
 ) -> IndexingResult:
     """Index the whole corpus. Unchanged chunks are skipped; anything not seen is deleted.
@@ -90,5 +123,5 @@ def index_chunks(
         batch_size=BATCH_SIZE,
         cleanup="full",
         source_id_key=SOURCE_ID_KEY,
-        key_encoder="sha256",
+        key_encoder=collection_key_encoder(collection),
     )

@@ -6,11 +6,11 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
-from langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field
 
-from app.config import Settings, require_secret
+from app.config import Settings
 from app.graph.state import GraphState, Route, trace_step
+from app.models import chat_model
 
 Node = Callable[[GraphState], dict[str, Any]]
 
@@ -45,14 +45,9 @@ FALLBACK_DECISION = RouteDecision(
 )
 
 
-def chat_model(settings: Settings, model: str) -> ChatGoogleGenerativeAI:
-    key = require_secret(settings.google_api_key, "GOOGLE_API_KEY")
-    return ChatGoogleGenerativeAI(model=model, temperature=0, api_key=SecretStr(key))
-
-
 def build_router(settings: Settings) -> Runnable[dict[str, str], dict[str, Any]]:
-    """Prompt | Flash model with structured output; `include_raw` keeps token usage."""
-    llm = chat_model(settings, settings.router_model)
+    """Prompt | `ROUTER_MODEL` with structured output; `include_raw` keeps token usage."""
+    llm = chat_model(settings.router_model)
     return ROUTE_PROMPT | llm.with_structured_output(RouteDecision, include_raw=True)
 
 

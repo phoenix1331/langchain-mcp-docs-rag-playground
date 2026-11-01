@@ -21,7 +21,6 @@ from sqlalchemy import Engine, text
 
 from app.retrieval.scope import Scope, in_scope, stored_versions
 from ingest.fetch import SpecVersions
-from ingest.index import COLLECTION
 
 SNAPSHOT_NAME = "bm25-chunks.json"
 TOKEN_PATTERN = re.compile(r"[a-z0-9_]+")
@@ -36,7 +35,7 @@ def tokenize(content: str) -> list[str]:
     return TOKEN_PATTERN.findall(content.lower())
 
 
-def stored_chunks(engine: Engine, collection: str = COLLECTION) -> list[Document]:
+def stored_chunks(engine: Engine, collection: str) -> list[Document]:
     """Every chunk PGVector holds for `collection`, in a stable order."""
     query = text(
         "SELECT e.id, e.document, e.cmetadata FROM langchain_pg_embedding e "

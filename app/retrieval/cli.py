@@ -7,8 +7,9 @@ from collections.abc import Sequence
 
 from langchain_core.documents import Document
 
-from app.config import MissingSecretError, get_settings
+from app.config import get_settings
 from app.db import make_engine
+from app.models import ModelConfigError
 from app.retrieval.bm25 import MissingSnapshotError
 from app.retrieval.scope import ALL, Scope
 from app.retrieval.search import Mode, Search
@@ -59,7 +60,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         scope = search.scope(args.version)
         started = time.monotonic()
         hits = search.retriever(args.version, args.mode, args.rerank).invoke(args.question)
-    except (MissingSnapshotError, MissingSecretError, ValueError) as exc:
+    except (MissingSnapshotError, ModelConfigError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     finally:

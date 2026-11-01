@@ -5,6 +5,7 @@ description = "Agentic RAG over the Model Context Protocol docs, built with Lang
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "langchain>=1.4.7",
     "langchain-classic>=1.0.8",
     "langchain-core>=1.7.3",
     "langchain-google-genai>=4.4.2",
@@ -14,6 +15,7 @@ dependencies = [
     "langgraph>=1.2.19",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.2",
+    "python-dotenv>=1.2.4",
     "pyyaml>=6.0.3",
     "rank-bm25>=0.2.2",
     "sqlalchemy>=2.1.6",

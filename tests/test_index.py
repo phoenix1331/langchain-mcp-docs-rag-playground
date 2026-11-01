@@ -11,11 +11,14 @@ from sqlalchemy.exc import OperationalError
 
 from app.config import get_settings
 from app.db import make_engine
+from app.retrieval.bm25 import stored_chunks
 from ingest.index import (
     DimensionMismatchError,
     build_record_manager,
     build_vector_store,
     check_dimensions,
+    collection_key_encoder,
+    collection_name,
     index_chunks,
     stored_dimensions,
 )
@@ -38,9 +41,9 @@ def test_reindexing_skips_unchanged_and_removes_stale(
     manager, store = stores
     corpus = [chunk("one"), chunk("two"), chunk("three", source="docs/b.mdx")]
 
-    first = index_chunks(corpus, manager, store)
-    second = index_chunks(corpus, manager, store)
-    changed = index_chunks([chunk("one"), chunk("two edited")], manager, store)
+    first = index_chunks(corpus, manager, store, "test")
+    second = index_chunks(corpus, manager, store, "test")
+    changed = index_chunks([chunk("one"), chunk("two edited")], manager, store, "test")
 
     assert (first["num_added"], first["num_skipped"]) == (3, 0)
     assert (second["num_added"], second["num_skipped"], second["num_deleted"]) == (0, 3, 0)
@@ -55,7 +58,10 @@ def test_same_text_in_two_versions_is_two_records(
     manager, store = stores
 
     result = index_chunks(
-        [chunk("same", version="2025-11-25"), chunk("same", version="2026-07-28")], manager, store
+        [chunk("same", version="2025-11-25"), chunk("same", version="2026-07-28")],
+        manager,
+        store,
+        "test",
     )
 
     assert result["num_added"] == 2
@@ -67,7 +73,7 @@ def test_progress_reported_every_batch(
     manager, store = stores
     seen: list[int] = []
 
-    index_chunks([chunk(f"text {i}") for i in range(250)], manager, store, seen.append)
+    index_chunks([chunk(f"text {i}") for i in range(250)], manager, store, "test", seen.append)
 
     assert seen == [100, 200]
 
@@ -96,8 +102,8 @@ def test_pgvector_round_trip_with_version_filter() -> None:
             chunk("guides", version="unversioned", source="docs/c.mdx"),
         ]
 
-        first = index_chunks(docs, manager, store)
-        second = index_chunks(docs, manager, store)
+        first = index_chunks(docs, manager, store, collection)
+        second = index_chunks(docs, manager, store, collection)
         version_filter = {"spec_version": {"$in": ["2026-07-28", "unversioned"]}}
         hits = store.similarity_search("sampling requests", k=5, filter=version_filter)
 
@@ -112,6 +118,46 @@ def test_pgvector_round_trip_with_version_filter() -> None:
                 {"ns": f"pgvector/{collection}"},
             )
         engine.dispose()
+
+
+@pytest.mark.db
+def test_same_chunks_in_two_collections_keep_separate_rows() -> None:
+    engine = make_engine()
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except OperationalError:
+        engine.dispose()
+        pytest.skip("database not reachable")
+
+    dims = get_settings().embed_dimensions
+    names = [f"test_{uuid.uuid4().hex[:8]}" for _ in range(2)]
+    stores = [
+        build_vector_store(engine, DeterministicFakeEmbedding(size=dims), dims, name)
+        for name in names
+    ]
+    docs = [chunk("lifecycle"), chunk("transports", source="docs/b.mdx")]
+    try:
+        for name, store in zip(names, stores, strict=True):
+            index_chunks(docs, build_record_manager(engine, name), store, name)
+
+        assert [len(stored_chunks(engine, name)) for name in names] == [2, 2]
+    finally:
+        for name, store in zip(names, stores, strict=True):
+            store.delete_collection()
+            with engine.begin() as conn:
+                conn.execute(
+                    text("DELETE FROM upsertion_record WHERE namespace = :ns"),
+                    {"ns": f"pgvector/{name}"},
+                )
+        engine.dispose()
+
+
+def test_key_encoder_depends_on_the_collection() -> None:
+    doc = chunk("same")
+
+    assert collection_key_encoder("a")(doc) != collection_key_encoder("b")(doc)
+    assert collection_key_encoder("a")(doc) == collection_key_encoder("a")(chunk("same"))
 
 
 def fake_engine(typmod: int | None) -> MagicMock:
@@ -134,3 +180,7 @@ def test_check_dimensions_passes_when_matching_or_missing() -> None:
 def test_check_dimensions_rejects_mismatch() -> None:
     with pytest.raises(DimensionMismatchError, match=r"vector\(8\) but EMBED_DIMENSIONS is 1024"):
         check_dimensions(fake_engine(8), 1024)
+
+
+def test_collection_name_includes_model_and_dimensions() -> None:
+    assert collection_name("voyageai:voyage-4", 1024) == "mcp_docs-voyageai-voyage-4-1024"

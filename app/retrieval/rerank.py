@@ -1,14 +1,11 @@
-"""Voyage reranking of the candidate chunks down to `RERANK_TOP_N`."""
+"""Voyage reranking of the candidate chunks down to `RERANK_TOP_N`; built by `app.models`."""
 
 from collections.abc import Sequence
 
 from langchain_core.callbacks import Callbacks
 from langchain_core.documents import Document
 from langchain_voyageai import VoyageAIRerank
-from pydantic import SecretStr
 from voyageai.object.reranking import RerankingObject
-
-from app.config import Settings, require_secret
 
 
 def _ranked(documents: Sequence[Document], result: RerankingObject) -> list[Document]:
@@ -41,10 +38,3 @@ class VoyageReranker(VoyageAIRerank):
         if not documents:
             return []
         return _ranked(documents, await self._arerank(documents, query))
-
-
-def build_reranker(settings: Settings) -> VoyageReranker:
-    key = require_secret(settings.voyage_api_key, "VOYAGE_API_KEY")
-    return VoyageReranker(
-        model=settings.rerank_model, top_k=settings.rerank_top_n, voyage_api_key=SecretStr(key)
-    )

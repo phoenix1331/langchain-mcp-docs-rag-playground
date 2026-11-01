@@ -8,9 +8,9 @@ from langchain_postgres import PGVector
 from sqlalchemy import Engine
 
 from app.config import Settings
+from app.models import embeddings as embedding_model
 from app.retrieval.scope import Scope
-from ingest.embeddings import voyage_embeddings
-from ingest.index import build_vector_store
+from ingest.index import build_vector_store, collection_name
 
 
 def scope_filter(scope: Scope) -> dict[str, Any] | None:
@@ -23,9 +23,12 @@ def scope_filter(scope: Scope) -> dict[str, Any] | None:
 def query_vector_store(
     settings: Settings, engine: Engine, embeddings: Embeddings | None = None
 ) -> PGVector:
-    """The ingest's vector store, embedding queries with Voyage (no ingest rate limiter)."""
+    """The ingest's collection for `EMBED_MODEL`, embedding queries without the rate limiter."""
     return build_vector_store(
-        engine, embeddings or voyage_embeddings(settings), settings.embed_dimensions
+        engine,
+        embeddings or embedding_model(settings.embed_model, settings.embed_dimensions),
+        settings.embed_dimensions,
+        collection_name(settings.embed_model, settings.embed_dimensions),
     )
 
 

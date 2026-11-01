@@ -2,9 +2,9 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from pydantic import SecretStr
 
-from app.config import MissingSecretError, Settings
+from app.config import Settings
+from app.models import ModelConfigError
 from app.retrieval import cli
 from app.retrieval.bm25 import KeywordIndex, MissingSnapshotError
 from app.retrieval.search import Search
@@ -21,11 +21,10 @@ def wired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     settings = Settings(
         _env_file=None,
         database_url="postgresql+psycopg://u:p@localhost/db",
-        router_model="r",
-        answer_model="a",
-        embed_model="e",
-        rerank_model="rr",
-        voyage_api_key=SecretStr("key"),
+        router_model="fake:r",
+        answer_model="fake:a",
+        embed_model="fake:e",
+        rerank_model="fake:rr",
         cache_dir=tmp_path,
     )
     engine = MagicMock()
@@ -67,7 +66,7 @@ def test_query_without_rerank_shows_no_score(
     "error",
     [
         MissingSnapshotError("run `make ingest` first"),
-        MissingSecretError("VOYAGE_API_KEY is not set"),
+        ModelConfigError("no reranker for provider 'x'"),
     ],
 )
 def test_query_reports_setup_errors(
