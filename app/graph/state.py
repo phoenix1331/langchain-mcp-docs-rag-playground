@@ -17,6 +17,14 @@ class TraceStep(TypedDict):
     tokens: int
 
 
+class Citation(TypedDict):
+    number: int  # the [n] used in the answer text
+    chunk_id: str | None
+    heading_path: str
+    spec_version: str
+    source_url: str
+
+
 class GraphInput(TypedDict):
     question: str
     spec_version: str  # a dated version, `latest` or `all`
@@ -29,7 +37,7 @@ class GraphState(GraphInput):
     documents: NotRequired[list[Document]]
     grades: NotRequired[list[bool]]  # relevance per entry in `documents`
     answer: NotRequired[str]
-    citations: NotRequired[list[Document]]
+    citations: NotRequired[list[Citation]]  # sources the answer actually cites
     trace: NotRequired[Annotated[list[TraceStep], operator.add]]  # nodes append, never replace
 
 

@@ -9,6 +9,7 @@ provider you switch to.
 """
 
 import re
+import warnings
 from collections.abc import Callable
 
 from langchain.chat_models import init_chat_model
@@ -43,7 +44,12 @@ def slug(spec: str) -> str:
     return re.sub(r"[^a-z0-9.]+", "-", spec.lower()).strip("-")
 
 
+# Gemini 3.x ignores temperature and warns on every call; other providers honour it.
+warnings.filterwarnings("ignore", message=r".*uses fixed sampling defaults.*", category=UserWarning)
+
+
 def chat_model(spec: str) -> BaseChatModel:
+    """Temperature 0 where the provider supports it, so eval runs stay comparable."""
     parse_spec(spec)
     return init_chat_model(spec, temperature=0)
 
