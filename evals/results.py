@@ -9,9 +9,9 @@ RESULTS_DIR = Path(__file__).parent / "results"
 COLUMNS = (
     ("pass_rate", "pass"),
     ("retrieval_hit_rate", "retrieval"),
-    ("correctness", "correct"),
+    ("correctness", "facts"),
     ("citation_accuracy", "citations"),
-    ("correct_declines", "declines"),
+    ("correct_declines", "ok-declines"),
 )
 
 

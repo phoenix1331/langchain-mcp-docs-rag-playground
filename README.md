@@ -171,15 +171,15 @@ Free tiers shape how this runs, and the defaults in `.env.example` are set for t
 |---|---|
 | Pass | The expected behaviour happened and, for answers, at least half the key facts were stated |
 | Retrieval | An expected source file was among the chunks the answer saw |
-| Correct | Share of key facts stated, judged by an LLM |
+| Key facts | Share of key facts stated, judged by an LLM |
 | Citations | The answer cited at least one expected source |
-| Declines | Off-topic and not-covered questions were declined, or answered with "this release does not define it" |
+| Correct declines | Of the questions that should not get a normal answer (off topic, or about a feature the release lacks), the share handled correctly: declined, or answered with "this release does not define it" |
 
 ### Results
 
 Four configurations, each run over all 46 questions with Gemini 3.1 Flash-Lite answering and judging, and Voyage embeddings and reranking (used because they're free; larger models will return better results):
 
-| Configuration | Pass | Retrieval | Correct | Citations | Declines | False declines |
+| Configuration | Pass | Retrieval | Key facts | Citations | Correct declines | False declines |
 |---|---|---|---|---|---|---|
 | Vector only | 89% | 83% | 83% | 81% | 88% | 2 |
 | Hybrid (BM25 + vector) | 87% | 86% | 82% | 86% | 75% | 2 |

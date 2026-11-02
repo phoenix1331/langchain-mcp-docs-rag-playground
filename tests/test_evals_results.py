@@ -63,7 +63,7 @@ def test_compare_formats_one_row_per_run() -> None:
     lines = compare(runs).splitlines()
 
     assert lines[0].split() == [
-        "run", "config", "pass", "retrieval", "correct", "citations", "declines",
+        "run", "config", "pass", "retrieval", "facts", "citations", "ok-declines",
         "false", "dec.", "time", "tokens",
     ]  # fmt: skip
     assert lines[1].split() == [
