@@ -1740,8 +1740,25 @@
       "expected": "decline",
       "spec_version": "2026-07-28",
       "question": "How do I sort a list of dictionaries by a key in Python?",
-      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
-      "passed": false
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 3.4,
+      "tokens": 196,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
     },
     {
       "id": "kubernetes-pods",
@@ -1749,8 +1766,25 @@
       "expected": "decline",
       "spec_version": "all",
       "question": "What is a Kubernetes pod?",
-      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
-      "passed": false
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 1.6,
+      "tokens": 193,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
     },
     {
       "id": "greeting",
@@ -1808,15 +1842,15 @@
   "complete": true,
   "summary": {
     "questions": 46,
-    "errors": 2,
-    "pass_rate": 0.886,
+    "errors": 0,
+    "pass_rate": 0.891,
     "retrieval_hit_rate": 0.833,
     "correctness": 0.833,
     "citation_accuracy": 0.806,
-    "correct_declines": 0.833,
+    "correct_declines": 0.875,
     "false_declines": 2,
     "direct_correct": 1.0,
-    "mean_seconds": 15.0,
-    "total_tokens": 95427
+    "mean_seconds": 14.4,
+    "total_tokens": 95816
   }
 }

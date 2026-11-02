@@ -4,6 +4,7 @@
 
 # MCP Docs RAG Playground
 
+[![CI](https://github.com/phoenix1331/langchain-mcp-docs-rag-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/phoenix1331/langchain-mcp-docs-rag-playground/actions/workflows/ci.yml)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)
 ![LangChain 1.4](https://img.shields.io/badge/LangChain-1.4-1C3C3C?logo=langchain&logoColor=white)
 ![LangGraph 1.2](https://img.shields.io/badge/LangGraph-1.2-1C3C3C?logo=langchain&logoColor=white)
@@ -79,7 +80,7 @@ flowchart TD
 | Keyword search | BM25 via `rank-bm25`, behind a small LangChain retriever |
 | Web | FastAPI, Jinja templates, HTMX with server-sent events; no front-end build step |
 | Evals | LLM-as-judge scoring, JSON results per run, optional LangSmith experiments |
-| Tooling | `ruff`, `pytest` with 100% line coverage on `app/` and `ingest/`, git hooks with `osv-scanner` |
+| Tooling | `ruff`, `pytest` with 100% line coverage on `app/` and `ingest/`, git hooks with `osv-scanner`, GitHub Actions CI with a pgvector service so the database tests run too |
 
 ## Getting started
 
@@ -176,7 +177,30 @@ Free tiers shape how this runs, and the defaults in `.env.example` are set for t
 
 ### Results
 
-<!-- EVAL_RESULTS -->
+Four configurations, each run over all 46 questions with Gemini 3.1 Flash-Lite answering and judging, and Voyage embeddings and reranking (used because they're free; larger models will return better results):
+
+| Configuration | Pass | Retrieval | Correct | Citations | Declines | False declines |
+|---|---|---|---|---|---|---|
+| Vector only | 89% | 83% | 83% | 81% | 88% | 2 |
+| Hybrid (BM25 + vector) | 87% | 86% | 82% | 86% | 75% | 2 |
+| **Hybrid + rerank** | **94%** | 89% | 83% | 89% | **100%** | 2 |
+| Hybrid + rerank + grading and rewrite | 89% | 89% | 82% | 89% | 88% | 3 |
+
+By question type, out of 27 version-specific, 9 cross-version, 4 absent-in-version, 4 off-topic and 2 greetings:
+
+| Configuration | Version-specific | Cross-version | Absent in version | Off topic and greetings |
+|---|---|---|---|---|
+| Vector only | 26 | 6 | 3 | 6 of 6 |
+| Hybrid | 26 | 6 | 2 | 6 of 6 |
+| Hybrid + rerank | 26 | 7 | 4 | 6 of 6 |
+| Hybrid + rerank + grading and rewrite | 25 | 7 | 3 | 6 of 6 |
+
+What the runs say, and how far to trust it:
+
+- **Reranking is the change that helped.** It fixed a cross-version question and every "this release does not have that feature" question, and is the best configuration overall.
+- **Grading and the rewrite loop did not earn their extra model call here.** They declined one answerable question ("How long can tool names be?") because only one chunk was relevant and the threshold is two, and fixed nothing the reranked search missed. A threshold of one, or a stronger grading model, may change that.
+- **Two failures are the same in every configuration**, so they are not about search: the router declines "How does ping work?" and a question about how tasks changed as off topic, and "Is ping still part of MCP?" never retrieves the 2026-07-28 changelog that says ping was removed.
+- **The differences are small.** One question is about two percentage points, most gaps are one to three questions, and a model does not give identical answers twice, so a rerun can move a configuration by a few points. The judge is also the answering model grading its own work, which can be lenient. Treat the ordering as indicative; set `JUDGE_MODEL` to a different provider and run each configuration more than once before relying on it.
 
 ![Eval runs with their configuration and scores](docs/screenshots/evals.png)
 
@@ -215,7 +239,7 @@ Both projects answer questions from a docs site with citations; this one exists 
 | Search | Vector by default; hybrid measured lower on that data | Hybrid plus a reranker; hybrid measured slightly higher here |
 | Evaluation | Retrieval only (recall@k, MRR) | Retrieval, LLM-judged correctness, citations and declines |
 
-The extra model calls buy routing, version honesty and a second attempt at retrieval, at the cost of latency and quota. Both projects found that measuring beat assumptions, and their hybrid results point in opposite directions on small question sets, which is a reason to measure on your own data.
+The extra model calls buy routing and a second attempt at retrieval, at the cost of latency and quota; on this question set, though, the grading step did not improve the scores (see [results](#results)), and reranking did more for version honesty. Both projects found that measuring beat assumptions, and their hybrid results point in opposite directions on small question sets, which is a reason to measure on your own data.
 
 ## Running ingestion on a schedule
 

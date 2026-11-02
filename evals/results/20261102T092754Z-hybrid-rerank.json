@@ -278,6 +278,47 @@
       "passed": true
     },
     {
+      "id": "stdio-framing",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How are messages framed on the stdio transport, and what can the server write to stderr?",
+      "error": null,
+      "answer": "In the `stdio` transport for spec version 2026-07-28, messages are framed as single JSON-RPC requests, notifications, or responses per line, delimited by newlines [1]. These messages **MUST NOT** contain embedded newlines [1].\n\nRegarding `stderr`, the server **MAY** write UTF-8 strings to `stderr` for logging purposes, including informational, debug, and error messages [1]. \n\nAdditional details regarding `stderr` include:\n*   The client **MAY** capture, forward, or ignore the server's `stderr` output and **SHOULD NOT** assume that output to `stderr` indicates an error condition [1].\n*   When using the `stdio` transport, messages logged to `stderr` are automatically captured by the host application [2].\n*   Servers should avoid logging to `stdout`, as this interferes with protocol operations [2].\n*   For servers using the `Streamable HTTP` transport, `stderr` is not captured by the client [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 5.6,
+      "tokens": 2294,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        false,
+        true,
+        true
+      ],
+      "correctness": 0.6666666666666666,
+      "citation_hit": true,
+      "judge_reason": "The answer correctly identifies the newline framing and stderr logging rules, but it does not explicitly state that the server reads from stdin and writes to stdout.",
+      "judge_tokens": 421,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
+        "docs/docs/2026-07-28/tools/debugging.mdx",
+        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
+        "docs/docs/2026-07-28/develop/build-server.mdx",
+        "docs/docs/2026-07-28/develop/build-server.mdx",
+        "docs/docs/2026-07-28/tools/inspector/web.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
+        "docs/docs/2026-07-28/tools/debugging.mdx"
+      ],
+      "passed": true
+    },
+    {
       "id": "streamable-http-headers",
       "category": "version_specific",
       "expected": "answer",
@@ -1487,47 +1528,6 @@
       "passed": false
     },
     {
-      "id": "stdio-framing",
-      "category": "version_specific",
-      "expected": "answer",
-      "spec_version": "2026-07-28",
-      "question": "How are messages framed on the stdio transport, and what can the server write to stderr?",
-      "error": null,
-      "answer": "In the `stdio` transport for spec version 2026-07-28, messages are framed as single JSON-RPC requests, notifications, or responses per line, delimited by newlines [1]. These messages **MUST NOT** contain embedded newlines [1].\n\nRegarding `stderr`, the server **MAY** write UTF-8 strings to `stderr` for logging purposes, including informational, debug, and error messages [1]. \n\nAdditional details regarding `stderr` include:\n*   The client **MAY** capture, forward, or ignore the server's `stderr` output and **SHOULD NOT** assume that output to `stderr` indicates an error condition [1].\n*   When using the `stdio` transport, messages logged to `stderr` are automatically captured by the host application [2].\n*   Servers should avoid logging to `stdout`, as this interferes with protocol operations [2].\n*   For servers using the `Streamable HTTP` transport, `stderr` is not captured by the client [2].",
-      "steps": [
-        "route",
-        "retrieve",
-        "answer"
-      ],
-      "model_calls": 2,
-      "seconds": 5.6,
-      "tokens": 2294,
-      "outcome": "answered",
-      "retrieval_hit": true,
-      "facts_found": [
-        false,
-        true,
-        true
-      ],
-      "correctness": 0.6666666666666666,
-      "citation_hit": true,
-      "judge_reason": "The answer correctly identifies the newline framing and stderr logging rules, but it does not explicitly state that the server reads from stdin and writes to stdout.",
-      "judge_tokens": 421,
-      "retrieved": [
-        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
-        "docs/docs/2026-07-28/tools/debugging.mdx",
-        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
-        "docs/docs/2026-07-28/develop/build-server.mdx",
-        "docs/docs/2026-07-28/develop/build-server.mdx",
-        "docs/docs/2026-07-28/tools/inspector/web.mdx"
-      ],
-      "cited": [
-        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
-        "docs/docs/2026-07-28/tools/debugging.mdx"
-      ],
-      "passed": true
-    },
-    {
       "id": "elicitation-absent-2024",
       "category": "absent_in_version",
       "expected": "not_covered",
@@ -1772,20 +1772,98 @@
       "retrieved": [],
       "cited": [],
       "passed": true
+    },
+    {
+      "id": "kubernetes-pods",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "all",
+      "question": "What is a Kubernetes pod?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 7.5,
+      "tokens": 193,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "greeting",
+      "category": "direct",
+      "expected": "direct",
+      "spec_version": "2026-07-28",
+      "question": "Hi there!",
+      "error": null,
+      "answer": "Hello! I'm here to help you navigate the Model Context Protocol documentation, including the specification, SDKs, and tools like the Inspector. Feel free to ask me anything about MCP, and I'll provide answers with citations from the official docs!",
+      "steps": [
+        "route",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.4,
+      "tokens": 316,
+      "outcome": "direct",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "what-can-you-do",
+      "category": "direct",
+      "expected": "direct",
+      "spec_version": "2026-07-28",
+      "question": "What can you help me with?",
+      "error": null,
+      "answer": "I can help you navigate the Model Context Protocol documentation, including the specification, implementation guides, SDKs, and the Inspector tool. Feel free to ask me any questions about these resources, and I will provide answers with citations from the relevant sections of the documentation.",
+      "steps": [
+        "route",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 5.1,
+      "tokens": 335,
+      "outcome": "direct",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
     }
   ],
-  "complete": false,
+  "complete": true,
   "summary": {
-    "questions": 43,
+    "questions": 46,
     "errors": 0,
-    "pass_rate": 0.93,
+    "pass_rate": 0.935,
     "retrieval_hit_rate": 0.889,
     "correctness": 0.829,
     "citation_accuracy": 0.889,
     "correct_declines": 1.0,
     "false_declines": 2,
-    "direct_correct": null,
-    "mean_seconds": 15.1,
-    "total_tokens": 106162
+    "direct_correct": 1.0,
+    "mean_seconds": 14.5,
+    "total_tokens": 107006
   }
 }
