@@ -6,22 +6,39 @@
   <title>{% block title %}MCP docs assistant{% endblock %}</title>
   <!-- Swap error fragments (4xx/5xx) into the page instead of dropping them. -->
   <meta name="htmx-config" content='{"responseHandling":[{"code":"204","swap":false},{"code":"[2345]..","swap":true}]}'>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
   <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
   <script src="https://unpkg.com/htmx-ext-sse@2.2.4/dist/sse.js" defer></script>
   <script src="{{ url_for('static', path='app.js') }}" defer></script>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <header class="site-header">
-    <a class="brand" href="/">MCP docs assistant</a>
-    <span class="tagline">Answers from the Model Context Protocol docs, cited by section</span>
+    <a class="brand" href="/">
+      <svg class="brand-mark" viewBox="0 0 28 16" aria-hidden="true">
+        <circle cx="4" cy="8" r="3.5"/><circle cx="24" cy="8" r="3.5"/><path d="M7.5 8h13"/>
+      </svg>
+      MCP docs assistant
+    </a>
     <nav class="site-nav" aria-label="Main">
-      <a href="/">Ask</a>
-      <a href="/evals">Evals</a>
+      <a href="/" {% block nav_ask %}{% endblock %}>Ask</a>
+      <a href="/evals" {% block nav_evals %}{% endblock %}>Evals</a>
+      <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">MCP docs</a>
     </nav>
   </header>
   <main>
     {% block content %}{% endblock %}
   </main>
+  <footer class="site-footer">
+    <p>Answers are drawn from the
+      <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol documentation</a>
+      by the MCP contributors, fetched from
+      <a href="https://github.com/modelcontextprotocol/modelcontextprotocol" target="_blank" rel="noopener">modelcontextprotocol/modelcontextprotocol</a>.
+      The specification is licensed under Apache-2.0 and the documentation under CC BY 4.0, with some
+      older contributions still under MIT (<a href="https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/LICENSE" target="_blank" rel="noopener">licence</a>).</p>
+    <p>An independent learning project, not affiliated with or endorsed by the Model Context Protocol project.</p>
+  </footer>
 </body>
 </html>

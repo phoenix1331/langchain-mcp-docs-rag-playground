@@ -1,5 +1,5 @@
 <article class="answer" hx-ext="sse" sse-connect="{{ stream_url }}" sse-close="done">
-  <p class="asked">{{ question }}</p>
+  <h2 class="asked">{{ question }}</h2>
   <ol class="stages" sse-swap="stage" hx-swap="beforeend" aria-label="Progress"></ol>
   <div class="answer-body" sse-swap="done" hx-swap="innerHTML">
     <div class="streaming" sse-swap="token" hx-swap="beforeend"></div>

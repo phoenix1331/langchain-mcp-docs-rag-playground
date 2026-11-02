@@ -326,20 +326,903 @@
         "docs/specification/2026-07-28/basic/transports/streamable-http.mdx"
       ],
       "passed": true
+    },
+    {
+      "id": "elicitation-sensitive-data",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "Can a server use form mode elicitation to ask the user for a password?",
+      "error": null,
+      "answer": "No, a server must not use form mode elicitation to request a password [1][2][3].\n\nAccording to the specification for version 2026-07-28, servers are strictly prohibited from using form mode to request sensitive information, which includes passwords, API keys, access tokens, and payment credentials [1][2]. Instead, servers must use `url` mode for interactions involving such sensitive information [1][6]. This ensures that sensitive data remains out-of-band and does not pass through the MCP client or the LLM context [3][5].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 2.9,
+      "tokens": 2076,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly states both key facts regarding the prohibition of form mode for sensitive data and the requirement to use URL mode instead.",
+      "judge_tokens": 290,
+      "retrieved": [
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/docs/2026-07-28/learn/client-concepts.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/docs/2026-07-28/learn/client-concepts.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/docs/2026-07-28/learn/client-concepts.mdx",
+        "docs/docs/2026-07-28/learn/client-concepts.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "sampling-with-tools",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How can a server let the client's LLM use tools during sampling?",
+      "error": null,
+      "answer": "To allow a client's LLM to use tools during sampling, a server must include a `tools` array and an optional `toolChoice` configuration within its `sampling/createMessage` request [1][2][4].\n\n### Requirements and Constraints\n*   **Capability Declaration:** Clients **must** declare support for tool use via the `sampling.tools` capability [1][4]. Servers **must not** send tool-enabled sampling requests to clients that have not declared this support [1][4]. If a server provides the `tools` or `toolChoice` fields without the client having declared this capability, the client must return an error [6].\n*   **Tool Scope:** Tool definitions provided in the `tools` array are scoped specifically to that sampling request [1][4]. They do not need to correspond to tools already registered by the server [1][4].\n*   **Default Behavior:** The default for `toolChoice` is `{ \"mode\": \"auto\" }` [6].\n\n### Implementation Flow\n1.  **Request:** The server sends a `sampling/createMessage` request containing the `tools` array and optional `toolChoice` inside the `InputRequiredResult.inputRequests` [2][4].\n2.  **LLM Response:** If the LLM decides to use a tool, it returns a response with a `stopReason` of `\"toolUse\"` and includes the tool call details (such as `name`, `id`, and `input`) in the content [2][3].\n3.  **Execution and Loop:** The server executes the requested tools and may initiate a multi-turn loop by sending a new `sampling/createMessage` request that includes the original history and the new tool results [3][5]. This process can repeat as needed until the server receives a final response [3][5].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 15.0,
+      "tokens": 2672,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly addresses all three key facts regarding the tools array, the capability declaration requirement, and the restriction on sending requests to unsupported clients.",
+      "judge_tokens": 573,
+      "retrieved": [
+        "docs/specification/2026-07-28/client/sampling.mdx",
+        "docs/specification/2026-07-28/client/sampling.mdx",
+        "docs/specification/2026-07-28/client/sampling.mdx",
+        "docs/docs/2026-07-28/learn/client-concepts.mdx",
+        "docs/specification/2026-07-28/client/sampling.mdx",
+        "docs/specification/2026-07-28/schema.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/client/sampling.mdx",
+        "docs/specification/2026-07-28/client/sampling.mdx",
+        "docs/specification/2026-07-28/client/sampling.mdx",
+        "docs/docs/2026-07-28/learn/client-concepts.mdx",
+        "docs/specification/2026-07-28/client/sampling.mdx",
+        "docs/specification/2026-07-28/schema.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "pagination-cursor",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How does pagination work for list operations?",
+      "error": null,
+      "answer": "In the Model Context Protocol (version 2026-07-28), pagination allows servers to return large result sets in smaller chunks [3].\n\n### The Pagination Flow\n1.  **Initial Request:** The client sends a list request (e.g., `resources/list`) without a cursor [1][6].\n2.  **Server Response:** The server returns a page of results and an optional `nextCursor` field if more results are available [1][4].\n3.  **Subsequent Requests:** To retrieve the next page, the client sends a new list request including the `cursor` received from the previous response [1][5]. This loop continues until the server no longer provides a `nextCursor` [1].\n\n### Technical Details\n*   **Request Parameters:** Paginated requests use the `PaginatedRequestParams` structure, which includes an optional `cursor` (an opaque string token) and the required `_meta` object [5].\n*   **Response Format:** Responses include the current page of results and the `nextCursor` [4].\n*   **Caching:** Each paginated page is treated as an independently cacheable response [2]. \n    *   Each page carries its own `ttlMs` value [2].\n    *   Servers **MUST** apply the same `cacheScope` to all pages of a single list request [2].\n    *   If a cursor becomes invalid, the client should discard cached pages and restart the request from the beginning [2].\n    *   There is no guarantee of cross-page consistency; if data changes during the pagination process, clients may encounter gaps or duplicates [2]. Clients requiring a consistent snapshot should re-fetch the entire list from the beginning without a cursor [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 20.4,
+      "tokens": 2253,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly mentions the use of an opaque cursor and the inclusion of an optional nextCursor field in the response.",
+      "judge_tokens": 518,
+      "retrieved": [
+        "docs/specification/2026-07-28/server/utilities/pagination.mdx",
+        "docs/specification/2026-07-28/server/utilities/caching.mdx",
+        "docs/specification/2026-07-28/server/utilities/pagination.mdx",
+        "docs/specification/2026-07-28/server/utilities/pagination.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/server/resources.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/server/utilities/pagination.mdx",
+        "docs/specification/2026-07-28/server/utilities/caching.mdx",
+        "docs/specification/2026-07-28/server/utilities/pagination.mdx",
+        "docs/specification/2026-07-28/server/utilities/pagination.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/server/resources.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "completion-request",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How does a client ask a server for argument autocompletion suggestions?",
+      "error": null,
+      "answer": "To ask for argument autocompletion suggestions, a client sends a `completion/complete` request to the server [1][2].\n\n### Request Structure\nThe request must be a JSON-RPC 2.0 message with the method `completion/complete` [3]. The `params` object must include the following [5]:\n\n*   **`_meta`**: Required request metadata, including the protocol version, client information, and client capabilities [6].\n*   **`ref`**: A reference to the prompt or resource template being completed (e.g., `{\"type\": \"ref/prompt\", \"name\": \"code_review\"}`) [1][5].\n*   **`argument`**: An object containing the `name` and `value` of the argument currently being typed [1][5].\n\n### Providing Context\nFor prompts or URI templates that require multiple arguments, clients should include previously completed arguments in the `context.arguments` object [1]. This allows the server to provide more accurate, context-aware suggestions for subsequent arguments [1][5].\n\n### Message Flow\nThe interaction follows a standard request-response pattern [2]:\n1.  **Client to Server**: The client sends the `completion/complete` request as the user types an argument [2].\n2.  **Server to Client**: The server responds with a list of completion `values`, a `total` count, and a `hasMore` boolean indicating if further suggestions are available [1].\n\nAs the user continues typing, the client may send subsequent `completion/complete` requests to receive refined suggestions from the server [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 40.5,
+      "tokens": 2910,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly mentions the completion/complete request and describes the inclusion of the reference and argument value.",
+      "judge_tokens": 502,
+      "retrieved": [
+        "docs/specification/2026-07-28/server/utilities/completion.mdx",
+        "docs/specification/2026-07-28/server/utilities/completion.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/server/prompts.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/server/utilities/completion.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/server/utilities/completion.mdx",
+        "docs/specification/2026-07-28/server/utilities/completion.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/server/utilities/completion.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "log-level-per-request",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How does a client set the log level for server log messages?",
+      "error": null,
+      "answer": "In the 2026-07-28 specification, a client sets the log level by including the `io.modelcontextprotocol/logLevel` field within the `_meta` object of a specific request [3][6].\n\nKey details regarding this mechanism include:\n\n*   **Per-request scope:** The log level is opted into on a per-request basis [1][2]. The server must not emit `notifications/message` for any request that does not include this field in its `_meta` [3][5][6].\n*   **Delivery:** When the field is present, the server may send `notifications/message` notifications at or above the requested level on the response stream of that specific request [3]. These notifications must not be delivered on any other stream, such as a `subscriptions/listen` stream [3][5].\n*   **Replacement of legacy methods:** This approach replaces the former `logging/setLevel` RPC, which is removed in this version [5][6].\n*   **Deprecation:** Note that `notifications/message` is marked as deprecated as of the 2026-07-28 protocol version, though it remains in the specification for at least twelve months [4][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.3,
+      "tokens": 2337,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly states that the log level is set per request via the specified field and confirms that servers must not emit notifications for requests lacking this field.",
+      "judge_tokens": 447,
+      "retrieved": [
+        "docs/docs/2026-07-28/tools/inspector/protocol-eras.mdx",
+        "docs/docs/2026-07-28/tools/debugging.mdx",
+        "docs/specification/2026-07-28/server/utilities/logging.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/changelog.mdx",
+        "docs/specification/2026-07-28/schema.mdx"
+      ],
+      "cited": [
+        "docs/docs/2026-07-28/tools/inspector/protocol-eras.mdx",
+        "docs/docs/2026-07-28/tools/debugging.mdx",
+        "docs/specification/2026-07-28/server/utilities/logging.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/changelog.mdx",
+        "docs/specification/2026-07-28/schema.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "authorization-iss",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "What must a client do with the iss parameter in an authorization response?",
+      "error": null,
+      "answer": "In the 2026-07-28 specification, an MCP client must perform the following actions regarding the `iss` parameter in an authorization response:\n\n*   **Record the Issuer:** Before redirecting the user-agent, the client **MUST** record the `issuer` value from the authorization server's validated metadata and associate it with the per-request record used for the PKCE code verifier [2].\n*   **Validate the Parameter:** Upon receiving an authorization response, the client **MUST** validate any present `iss` parameter against the recorded issuer before transmitting the authorization code to the token endpoint [2][4]. This validation also applies to error responses; if there is a mismatch, the client **MUST NOT** act on or display the `error`, `error_description`, or `error_uri` [3].\n*   **Comparison Rules:** When comparing the `iss` value, the client **MUST NOT** apply scheme or host case folding, default-port elision, trailing-slash, or percent-encoding normalization [3]. The comparison must be a simple string comparison as defined in [RFC3986 Section 6.2.1][1].\n*   **Handling Metadata Advertisement:** The client's behavior depends on the `authorization_response_iss_parameter_supported` metadata value [1]:\n    *   If `true` and `iss` is present: Compare to the recorded issuer [1].\n    *   If `true` and `iss` is absent: Reject the response [1].\n    *   If `false` or absent and `iss` is present: Compare to the recorded issuer (to accommodate servers that emit `iss` before updating metadata) [1].\n    *   If `false` or absent and `iss` is absent: Proceed [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 20.9,
+      "tokens": 2705,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        false,
+        true
+      ],
+      "correctness": 0.5,
+      "citation_hit": true,
+      "judge_reason": "The answer does not mention RFC 9207, but it correctly states the requirement for clients to validate the iss parameter against the recorded issuer.",
+      "judge_tokens": 561,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/authorization/index.mdx",
+        "docs/specification/2026-07-28/basic/authorization/index.mdx",
+        "docs/specification/2026-07-28/basic/authorization/index.mdx",
+        "docs/specification/2026-07-28/changelog.mdx",
+        "docs/specification/2026-07-28/basic/authorization/client-registration.mdx",
+        "docs/specification/2026-07-28/basic/authorization/index.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/authorization/index.mdx",
+        "docs/specification/2026-07-28/basic/authorization/index.mdx",
+        "docs/specification/2026-07-28/basic/authorization/index.mdx",
+        "docs/specification/2026-07-28/changelog.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "server-primitives",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "What are the three core primitives an MCP server can expose?",
+      "error": null,
+      "answer": "The three core primitives that an MCP server can expose are **Tools**, **Resources**, and **Prompts** [1][2][3].\n\nThese primitives are defined as follows:\n\n*   **Tools**: Executable functions that allow models to perform actions or retrieve information [2]. They are model-controlled, meaning the LLM decides when to use them based on user requests [2][4].\n*   **Resources**: Structured data or content that provides passive, read-only access to information for context [2][4]. They are application-controlled and managed by the client [2].\n*   **Prompts**: Pre-defined templates or instructions that help structure interactions with language models [1][2]. They are user-controlled and invoked by user choice [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 18.8,
+      "tokens": 2157,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly identifies and defines all three core primitives as requested.",
+      "judge_tokens": 316,
+      "retrieved": [
+        "docs/docs/2026-07-28/learn/architecture.mdx",
+        "docs/specification/2026-07-28/server/index.mdx",
+        "docs/docs/2026-07-28/develop/build-server.mdx",
+        "docs/docs/2026-07-28/learn/server-concepts.mdx",
+        "docs/docs/2026-07-28/learn/architecture.mdx",
+        "docs/specification/2026-07-28/architecture/index.mdx"
+      ],
+      "cited": [
+        "docs/docs/2026-07-28/learn/architecture.mdx",
+        "docs/specification/2026-07-28/server/index.mdx",
+        "docs/docs/2026-07-28/develop/build-server.mdx",
+        "docs/docs/2026-07-28/learn/server-concepts.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "transports-2024",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2024-11-05",
+      "question": "Which transports does MCP define?",
+      "error": null,
+      "answer": "For the 2024-11-05 version of the specification, MCP defines two standard transport mechanisms for client-server communication [1]:\n\n1.  **stdio**: The client launches the MCP server as a subprocess, communicating via standard input (`stdin`) and standard output (`stdout`) [1][6]. Messages are delimited by newlines, and the server may write logging information to standard error (`stderr`) [6].\n2.  **HTTP with Server-Sent Events (SSE)**: This mechanism uses Server-Sent Events for server-to-client messages and HTTP POST for client-to-server messages [1][2]. It supports remote server communication and standard HTTP authentication methods, such as API keys, bearer tokens, and custom headers [2].\n\nAdditionally, the specification notes that clients and servers may implement custom transports in a pluggable fashion [1]. \n\nWhile the `MCP Apps` extension mentions the use of `postMessage` as a transport for app-specific dialects of MCP [4], this is an extension rather than a core transport defined in the 2024-11-05 base protocol specification [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 141.6,
+      "tokens": 1901,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        false
+      ],
+      "correctness": 0.6666666666666666,
+      "citation_hit": true,
+      "judge_reason": "The answer correctly identifies stdio and HTTP with SSE as the defined transports but fails to mention the recommendation regarding stdio support.",
+      "judge_tokens": 411,
+      "retrieved": [
+        "docs/specification/2024-11-05/basic/transports.mdx",
+        "docs/docs/2024-11-05/learn/architecture.mdx",
+        "docs/docs/2024-11-05/learn/architecture.mdx",
+        "docs/extensions/apps/overview.mdx",
+        "docs/docs/2024-11-05/learn/architecture.mdx",
+        "docs/specification/2024-11-05/basic/transports.mdx"
+      ],
+      "cited": [
+        "docs/specification/2024-11-05/basic/transports.mdx",
+        "docs/docs/2024-11-05/learn/architecture.mdx",
+        "docs/extensions/apps/overview.mdx",
+        "docs/specification/2024-11-05/basic/transports.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "lifecycle-2024",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2024-11-05",
+      "question": "How does a connection start?",
+      "error": null,
+      "answer": "A connection in the Model Context Protocol (MCP) begins with an **Initialization** phase, which must be the first interaction between the client and the server [1][2].\n\n### The Initialization Process\nDuring this phase, the client and server perform the following steps:\n1. **Establish compatibility**: They agree on the protocol version [1][2].\n2. **Negotiate capabilities**: They exchange and negotiate their respective capabilities [1][2].\n3. **Share information**: They exchange implementation details (such as name and version) [1].\n\n### Sequence of Operations\n1. **`initialize` request**: The client initiates the phase by sending an `initialize` request containing the protocol version, client capabilities, and client implementation information [1].\n2. **`initialize` response**: The server must respond with its own capabilities and server information [1].\n3. **`initialized` notification**: After a successful initialization, the client must send an `initialized` notification to signal that it is ready to begin normal operations [1].\n\n### Constraints\n* **Client behavior**: The client should not send any requests other than `ping` before the server has responded to the `initialize` request [4].\n* **Server behavior**: The server should not send any requests other than `ping` and `logging` before it has received the `initialized` notification [4].\n\n### Implementation Details\nWhile the specification defines the required JSON-RPC messages for initialization [1], the guides provide examples of how to manage the connection process:\n* **Process Management**: Clients typically start the server as a child process using command-line arguments [3][5].\n* **Transport**: The connection is established over a transport, such as `stdio` [3][5].\n* **Client Setup**: In some implementations, the client is initialized using a specific method (e.g., `McpClient.CreateAsync()`) to set up the transport and the command to run the server [6].\n\nFollowing the initialization phase, the connection enters the **Operation** phase for normal communication, followed eventually by a **Shutdown** phase for graceful termination [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 4.7,
+      "tokens": 2460,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        false
+      ],
+      "correctness": 0.6666666666666666,
+      "citation_hit": true,
+      "judge_reason": "The answer correctly identifies the initialize request/response cycle and the subsequent initialized notification, but it does not mention the protocol version requirement.",
+      "judge_tokens": 621,
+      "retrieved": [
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/docs/2024-11-05/develop/build-client.mdx",
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/docs/2024-11-05/develop/build-client.mdx",
+        "docs/docs/2024-11-05/develop/build-client.mdx"
+      ],
+      "cited": [
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/docs/2024-11-05/develop/build-client.mdx",
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/docs/2024-11-05/develop/build-client.mdx",
+        "docs/docs/2024-11-05/develop/build-client.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "logging-levels-2024",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2024-11-05",
+      "question": "What log levels can servers use?",
+      "error": null,
+      "answer": "Servers can use eight log levels, which follow the standard syslog severity levels defined in [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1) [1][2]. These levels are:\n\n*   `debug`: Detailed debugging information [1]\n*   `info`: General informational messages [1]\n*   `notice`: Normal but significant events [1]\n*   `warning`: Warning conditions [1]\n*   `error`: Error conditions [1]\n*   `critical`: Critical conditions [1]\n*   `alert`: Action must be taken immediately [1]\n*   `emergency`: System is unusable [1]\n\nClients can control the verbosity of these logs by setting a minimum log level at runtime using the `logging/setLevel` request [2][4][5]. Servers send these logs to the client using `notifications/message` notifications [4][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.7,
+      "tokens": 1835,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly mentions the RFC 5424 syslog levels and lists all eight levels from debug to emergency.",
+      "judge_tokens": 362,
+      "retrieved": [
+        "docs/specification/2024-11-05/server/utilities/logging.mdx",
+        "docs/docs/2024-11-05/tools/debugging.mdx",
+        "docs/docs/2024-11-05/tools/debugging.mdx",
+        "docs/specification/2024-11-05/server/utilities/logging.mdx",
+        "docs/specification/2024-11-05/server/utilities/logging.mdx",
+        "docs/specification/2024-11-05/server/utilities/logging.mdx"
+      ],
+      "cited": [
+        "docs/specification/2024-11-05/server/utilities/logging.mdx",
+        "docs/docs/2024-11-05/tools/debugging.mdx",
+        "docs/specification/2024-11-05/server/utilities/logging.mdx",
+        "docs/specification/2024-11-05/server/utilities/logging.mdx",
+        "docs/specification/2024-11-05/server/utilities/logging.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "ping-2024",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2024-11-05",
+      "question": "How does ping work?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 6.3,
+      "tokens": 190,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": false,
+      "facts_found": [],
+      "correctness": 0.0,
+      "citation_hit": false,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": false
+    },
+    {
+      "id": "tool-annotations-2025-03",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2025-03-26",
+      "question": "What are tool annotations and should clients trust them?",
+      "error": null,
+      "answer": "Tool annotations are optional properties included in a tool definition that describe the tool's behavior [1].\n\nClients **must** consider tool annotations to be untrusted unless they originate from a trusted server [1][2]. Because tools represent arbitrary code execution, descriptions of tool behavior\u2014including annotations\u2014must be treated with appropriate caution [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 3.1,
+      "tokens": 1753,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly addresses both the definition of tool annotations and the requirement for clients to treat them as untrusted.",
+      "judge_tokens": 238,
+      "retrieved": [
+        "docs/specification/2025-03-26/server/tools.mdx",
+        "docs/specification/2025-03-26/index.mdx",
+        "docs/specification/2025-03-26/server/tools.mdx",
+        "docs/docs/2025-03-26/learn/server-concepts.mdx",
+        "docs/specification/2025-03-26/server/tools.mdx",
+        "docs/docs/2025-03-26/develop/clients/client-best-practices.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-03-26/server/tools.mdx",
+        "docs/specification/2025-03-26/index.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "session-id-2025-03",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2025-03-26",
+      "question": "How does the Streamable HTTP transport manage sessions?",
+      "error": null,
+      "answer": "In the Streamable HTTP transport for version 2025-03-26, session management is handled through the `Mcp-Session-Id` header to support stateful interactions between a client and a server [1][3].\n\n### Session Initialization and Usage\n*   **Initialization:** A server may assign a session ID during the initialization phase by including an `Mcp-Session-Id` header in the HTTP response that contains the `InitializeResult` [1].\n*   **Requirements for IDs:** The session ID must consist only of visible ASCII characters (0x21 to 0x7E) and should be globally unique and cryptographically secure [1].\n*   **Client Obligations:** If a server returns an `Mcp-Session-Id`, the client must include this header in all subsequent HTTP requests [1][2].\n*   **Server Enforcement:** If a server requires a session ID, it should respond with an HTTP 400 Bad Request to any non-initialization request that lacks the header [1].\n\n### Session Termination\n*   **Server-Initiated:** A server may terminate a session at any time [1]. If a client sends a request with a session ID for a terminated session, the server must respond with HTTP 404 Not Found [1].\n*   **Client Recovery:** Upon receiving an HTTP 404 for a request containing a session ID, the client must start a new session by sending an `InitializeRequest` without a session ID [1].\n*   **Client-Initiated:** Clients should explicitly terminate sessions they no longer need by sending an HTTP DELETE request to the MCP endpoint with the `Mcp-Session-Id` header [1][4].\n*   **Server Restrictions:** A server may respond to a client's termination request with HTTP 405 Method Not Allowed if it does not permit clients to terminate sessions [4].\n\n### Resumability\nWhen session management is in use, servers may attach an `id` field to SSE events to act as a cursor for that specific stream [6]. If a connection breaks, a client can attempt to resume by issuing an HTTP GET request to the MCP endpoint, including the `Last-Event-ID` header to indicate the last event received [6]. The server may then use this to replay messages from that point on the original stream [6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 6.0,
+      "tokens": 2622,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly states that servers assign the session ID during initialization and that clients must include this header in all subsequent requests.",
+      "judge_tokens": 666,
+      "retrieved": [
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "structured-output-2025-06",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2025-06-18",
+      "question": "How can a tool return structured output?",
+      "error": null,
+      "answer": "In the MCP specification (version 2025-06-18), a tool returns structured output by providing a JSON object in the `structuredContent` field of the `CallToolResult` [2][4].\n\n### Implementation Details\n*   **`structuredContent` field**: This field is an optional JSON object (`{ [key: string]: unknown }`) used to return the structured result of a tool call [4].\n*   **Backwards Compatibility**: For compatibility, a tool that returns `structuredContent` should also return the serialized JSON within a `TextContent` block inside the `content` array [2].\n*   **Output Schema**: Servers may provide an `outputSchema` for a tool [1]. If an `outputSchema` is provided:\n    *   Servers **MUST** provide structured results that conform to that schema [1].\n    *   Clients **SHOULD** validate structured results against that schema [1].\n\n### Important Distinction\nThe `structuredContent` field is used for server-produced result data and is distinct from LLM \"structured outputs\" (which refers to schema-constrained model generation) [2].\n\n### Example Response\nThe following example shows a valid response containing both a `text` content block and `structuredContent`:\n\n```json\n{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 5,\n  \"result\": {\n    \"content\": [\n      {\n        \"type\": \"text\",\n        \"text\": \"{\\\"temperature\\\": 22.5, \\\"conditions\\\": \\\"Partly cloudy\\\", \\\"humidity\\\": 65}\"\n      }\n    ],\n    \"structuredContent\": {\n      \"temperature\": 22.5,\n      \"conditions\": \"Partly cloudy\",\n      \"humidity\": 65\n    }\n  }\n}\n```\n*[1]*",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 3.7,
+      "tokens": 2630,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly confirms that tools can have an optional outputSchema and that structured content is returned via the structuredContent field.",
+      "judge_tokens": 560,
+      "retrieved": [
+        "docs/specification/2025-06-18/server/tools.mdx",
+        "docs/specification/2025-06-18/server/tools.mdx",
+        "docs/docs/2025-06-18/learn/architecture.mdx",
+        "docs/specification/2025-06-18/schema.mdx",
+        "docs/docs/2025-06-18/learn/architecture.mdx",
+        "docs/docs/2025-06-18/develop/clients/client-best-practices.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-06-18/server/tools.mdx",
+        "docs/specification/2025-06-18/server/tools.mdx",
+        "docs/specification/2025-06-18/schema.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "protocol-version-header-2025-06",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2025-06-18",
+      "question": "Which HTTP header must clients send after negotiating the protocol version?",
+      "error": null,
+      "answer": "When using the Streamable HTTP transport, clients **MUST** include the `MCP-Protocol-Version` HTTP header on all requests subsequent to the initial negotiation [1][2].\n\nThe value of this header should be the protocol version that was negotiated during the `initialize` request [1]. If a server receives a request with an invalid or unsupported `MCP-Protocol-Version`, it is required to respond with `400 Bad Request` [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 2.7,
+      "tokens": 2436,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly states that clients must include the MCP-Protocol-Version header on all requests subsequent to the initial negotiation.",
+      "judge_tokens": 242,
+      "retrieved": [
+        "docs/specification/2025-06-18/basic/transports.mdx",
+        "docs/specification/2025-06-18/basic/lifecycle.mdx",
+        "docs/specification/2025-06-18/changelog.mdx",
+        "docs/specification/2025-06-18/basic/transports.mdx",
+        "docs/specification/2025-06-18/basic/authorization.mdx",
+        "docs/specification/2025-06-18/basic/transports.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-06-18/basic/transports.mdx",
+        "docs/specification/2025-06-18/basic/lifecycle.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "tasks-2025-11",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2025-11-25",
+      "question": "How do task-augmented requests return their results?",
+      "error": null,
+      "answer": "Task-augmented requests use a two-phase response pattern to return results [2].\n\n### The Two-Phase Process\n1.  **Initial Response:** When a receiver accepts a task-augmented request, it immediately returns a `CreateTaskResult` containing task data, rather than the actual operation result [2][3].\n2.  **Result Retrieval:** The actual operation result becomes available later through a `tasks/result` request after the task has completed [2][3].\n\n### Behavior Requirements for `tasks/result`\nWhen a receiver processes a `tasks/result` request, it must adhere to the following rules:\n\n*   **Terminal Status:** If the task is in a terminal status (`completed`, `failed`, or `cancelled`), the receiver must return the final result of the underlying request (or the corresponding JSON-RPC error) [1]. The receiver must return exactly what the underlying request would have returned had it been a normal request [1].\n*   **Non-Terminal Status:** If the task is in a non-terminal status (`working` or `input_required`), the receiver must block the response until the task reaches a terminal status [1].\n\n### Implementation Details\n*   **Polling:** Requestors typically poll for the task's status using `tasks/get` before requesting the final result [4][5].\n*   **Immediate Feedback:** Servers may optionally provide an `io.modelcontextprotocol/model-immediate-response` key in the `_meta` field of the `CreateTaskResult`. This allows the server to provide a string intended to be passed as an immediate tool result to the model while the task is still executing [3].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 61.2,
+      "tokens": 2783,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        false,
+        true,
+        true
+      ],
+      "correctness": 0.6666666666666666,
+      "citation_hit": true,
+      "judge_reason": "The answer correctly identifies the two-phase process and the use of tasks/result, but it does not mention that tasks are experimental.",
+      "judge_tokens": 527,
+      "retrieved": [
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/extensions/tasks/overview.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx",
+        "docs/specification/2025-11-25/basic/utilities/tasks.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "tool-names-2025-11",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2025-11-25",
+      "question": "How long can tool names be?",
+      "error": null,
+      "answer": "According to the 2025-11-25 specification, tool names should be between 1 and 128 characters in length, inclusive [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.7,
+      "tokens": 2085,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly states the 1 to 128 character length constraint for tool names.",
+      "judge_tokens": 167,
+      "retrieved": [
+        "docs/specification/2025-11-25/server/tools.mdx",
+        "docs/docs/2025-11-25/develop/build-client.mdx",
+        "docs/docs/2025-11-25/develop/build-client.mdx",
+        "docs/specification/2025-11-25/schema.mdx",
+        "docs/specification/2025-11-25/server/tools.mdx",
+        "docs/docs/2025-11-25/learn/architecture.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-11-25/server/tools.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "oauth-client-credentials",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How can an MCP client authenticate when there is no user present to approve access?",
+      "error": null,
+      "answer": "When no user is present to approve access, an MCP client can authenticate using the **OAuth Client Credentials** extension [1][5].\n\nThis extension allows a client to authenticate using application-level credentials\u2014such as a `client_id` and `client_secret` or a signed JWT assertion\u2014instead of relying on the standard interactive authorization flow that requires a browser redirect [1][4].\n\n### How it works\n*   **Direct Authentication:** The client proves its identity directly to the authorization server, which issues an access token without requiring user interaction [1].\n*   **Client Secrets:** For simpler deployments, the client sends its `client_id` and `client_secret` to the authorization server's token endpoint to receive an access token [4].\n*   **Security Recommendations:** Because client secrets are long-lived, they should be stored in a secrets manager rather than source code, rotated regularly, and scoped to the minimum required permissions [4]. Using JWT assertions is preferred over client secrets because they are short-lived and do not require transmitting a signing key [4].\n\n### When to use it\nThis approach is intended for scenarios where there is no human in the loop [3], including:\n*   **Background services** that call MCP tools on a schedule or in response to events [2].\n*   **CI/CD pipelines** that invoke MCP servers for automated workflows [2].\n*   **Server-to-server integrations** connecting two backend systems [2].\n*   **Daemon processes** or long-running workers that require persistent access to resources [2].\n\n*Note: The provided specification sources for version 2026-07-28 do not explicitly define the OAuth Client Credentials extension; that information is provided by the extension documentation [1][2][3][4][5]. The guide for `mcpdo` in version 2026-07-28 describes handling interactive browser sign-ins when a TTY is unavailable, but it does not detail the machine-to-machine flow [6].*",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 8.1,
+      "tokens": 1949,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        false
+      ],
+      "correctness": 0.6666666666666666,
+      "citation_hit": true,
+      "judge_reason": "The answer correctly identifies the OAuth Client Credentials extension and the use of application credentials, but it fails to mention that human-user integrations should use the standard MCP authorization flow.",
+      "judge_tokens": 637,
+      "retrieved": [
+        "docs/extensions/auth/oauth-client-credentials.mdx",
+        "docs/extensions/auth/oauth-client-credentials.mdx",
+        "docs/extensions/auth/overview.mdx",
+        "docs/extensions/auth/oauth-client-credentials.mdx",
+        "docs/extensions/auth/overview.mdx",
+        "docs/docs/2026-07-28/tools/inspector/mcpdo.mdx"
+      ],
+      "cited": [
+        "docs/extensions/auth/oauth-client-credentials.mdx",
+        "docs/extensions/auth/oauth-client-credentials.mdx",
+        "docs/extensions/auth/overview.mdx",
+        "docs/extensions/auth/oauth-client-credentials.mdx",
+        "docs/extensions/auth/overview.mdx",
+        "docs/docs/2026-07-28/tools/inspector/mcpdo.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "enterprise-managed-authorization",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How can an organisation control which MCP servers its employees can access?",
+      "error": null,
+      "answer": "Organizations can control employee access to MCP servers using two primary approaches described in the documentation:\n\n### 1. Enterprise-Managed Authorization (Extension)\nOrganizations can use the `io.modelcontextprotocol/enterprise-managed-authorization` extension to centralize access control through their existing identity provider (IdP) [3]. This approach replaces individual, user-driven authorization with a policy-based model [1].\n\n*   **Centralized Policy:** The IdP acts as the authoritative decision-maker, maintaining a registry of approved MCP servers and associated access policies [1][2].\n*   **Single Sign-On (SSO):** Employees authenticate once using their corporate credentials. The IdP issues tokens for approved servers, eliminating the need for per-server authorization prompts [2].\n*   **Policy Enforcement:** The IdP evaluates group membership, roles, and conditional access rules before granting access [2].\n*   **Centralized Revocation:** Access can be revoked at the IdP level, taking effect immediately across all MCP clients [2].\n\nThis method is recommended for corporate environments that need to enforce organizational policies, meet compliance requirements, or simplify the employee experience [4].\n\n### 2. Managing Local Servers (Guide)\nFor organizations managing local MCP server deployments, the documentation provides guidance on fleet-wide management [5][6]. Note that these are provided in a **Guide** source, which does not define the technical specification for the protocol [5].\n\n*   **Define Approved Sources:** Publish an allowlist of vetted servers with pinned versions and specific criteria for approval (e.g., identifiable publisher, provenance metadata, and an SBOM) [5].\n*   **Inventory and Audit:** Use endpoint management tools to collect client configuration files to track which servers are running across the fleet [5][6].\n*   **Centralized Deployment:** For servers that wrap SaaS APIs, deploy them centrally rather than on individual laptops to simplify patching, auditing, and control [5].\n*   **Default Runtime Posture:** Establish and document security standards for how servers run on managed machines, such as requiring containerization without home-directory mounts [5].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 3.7,
+      "tokens": 2058,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly identifies the Enterprise-Managed Authorization extension and describes the IdP as the authoritative decision-maker for access.",
+      "judge_tokens": 605,
+      "retrieved": [
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/docs/2026-07-28/tutorials/security/local-server-security.mdx",
+        "docs/docs/2026-07-28/tutorials/security/local-server-security.mdx"
+      ],
+      "cited": [
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/docs/2026-07-28/tutorials/security/local-server-security.mdx",
+        "docs/docs/2026-07-28/tutorials/security/local-server-security.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "authorization-introduced",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "In which spec version was authorization added, and what is it based on?",
+      "error": null,
+      "answer": "The authorization framework was added in the 2025-03-26 specification [1].\n\nThe framework is based on a selected subset of features from the following standards:\n\n*   **OAuth 2.1**: The 2025-03-26 specification cites the IETF DRAFT `draft-ietf-oauth-v2-1-12` [2], while the 2025-06-18 specification cites `draft-ietf-oauth-v2-1-13` [3].\n*   **OAuth 2.0 Authorization Server Metadata** (`RFC8414`) [2][3].\n*   **OAuth 2.0 Dynamic Client Registration Protocol** (`RFC7591`) [2][3].\n*   **OAuth 2.0 Protected Resource Metadata** (`RFC9728`): This is included in the 2025-06-18 specification [3], but is not mentioned in the 2025-03-26 specification [2].\n\nAdditionally, while the Guides [4][5][6] mention `RFC 8707` (Resource Indicators) as a standard that MCP authorization builds on, this is not mentioned in the Specification sources [2][3].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 5.2,
+      "tokens": 2490,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly confirms the version date and identifies OAuth 2.1 as a foundational standard.",
+      "judge_tokens": 447,
+      "retrieved": [
+        "docs/specification/2025-03-26/changelog.mdx",
+        "docs/specification/2025-03-26/basic/authorization.mdx",
+        "docs/specification/2025-06-18/basic/authorization.mdx",
+        "docs/docs/2025-03-26/tutorials/security/authorization.mdx",
+        "docs/docs/2026-07-28/tutorials/security/authorization.mdx",
+        "docs/docs/2025-06-18/tutorials/security/authorization.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-03-26/changelog.mdx",
+        "docs/specification/2025-03-26/basic/authorization.mdx",
+        "docs/specification/2025-06-18/basic/authorization.mdx",
+        "docs/docs/2025-03-26/tutorials/security/authorization.mdx",
+        "docs/docs/2026-07-28/tutorials/security/authorization.mdx",
+        "docs/docs/2025-06-18/tutorials/security/authorization.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "batching-history",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "Does MCP support JSON-RPC batching?",
+      "error": null,
+      "answer": "Support for JSON-RPC batching depends on the version of the MCP specification:\n\n*   **In the 2025-03-26 specification:** MCP supports JSON-RPC batching [2]. Implementations **MAY** support sending batches, but **MUST** support receiving them [1]. The `Streamable HTTP` transport explicitly allows batching in the body of POST requests [4] and within SSE streams [5][6].\n*   **In the 2025-06-18 specification:** Support for JSON-RPC batching has been removed [3].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 4.5,
+      "tokens": 2532,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly addresses both the addition of batching in the 2025-03-26 specification and its removal in the 2025-06-18 specification.",
+      "judge_tokens": 317,
+      "retrieved": [
+        "docs/specification/2025-03-26/basic/index.mdx",
+        "docs/specification/2025-03-26/changelog.mdx",
+        "docs/specification/2025-06-18/changelog.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-03-26/basic/index.mdx",
+        "docs/specification/2025-03-26/changelog.mdx",
+        "docs/specification/2025-06-18/changelog.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx"
+      ],
+      "passed": true
     }
   ],
   "complete": false,
   "summary": {
-    "questions": 8,
+    "questions": 29,
     "errors": 1,
-    "pass_rate": 1.0,
-    "retrieval_hit_rate": 1.0,
-    "correctness": 1.0,
-    "citation_accuracy": 1.0,
+    "pass_rate": 0.964,
+    "retrieval_hit_rate": 0.964,
+    "correctness": 0.899,
+    "citation_accuracy": 0.964,
     "correct_declines": null,
-    "false_declines": 0,
+    "false_declines": 1,
     "direct_correct": null,
-    "mean_seconds": 20.8,
-    "total_tokens": 20556
+    "mean_seconds": 19.2,
+    "total_tokens": 76397
   }
 }

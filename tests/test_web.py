@@ -108,6 +108,11 @@ def test_index_lists_versions_newest_first_with_latest_selected(client: TestClie
     assert page.index('value="2026-07-28" selected') < page.index('value="2025-11-25"')
     assert "2026-07-28 (latest)" in page
     assert '<option value="all">All versions</option>' in page
+    assert '<a href="/" aria-current="page">Ask</a>' in page
+    docs_link = '<a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">'
+    assert f"{docs_link}MCP docs</a>" in page
+    assert "licensed under Apache-2.0 and the documentation under CC BY 4.0" in page
+    assert "not affiliated with or endorsed by the Model Context Protocol project" in page
     assert 'hx-post="/ask"' in page
     assert f'maxlength="{MAX_QUESTION_CHARS}"' in page
     # The question box is cleared after a successful submit, but kept after a 422.
@@ -132,7 +137,7 @@ def test_ask_returns_the_stream_shell_without_running_the_graph(
         in response.text
     )
     assert 'sse-close="done"' in response.text
-    assert '<p class="asked">How are tokens refreshed?</p>' in response.text
+    assert '<h2 class="asked">How are tokens refreshed?</h2>' in response.text
     assert "<html" not in response.text  # a fragment, not a page
 
 
@@ -176,7 +181,7 @@ def test_stream_sends_stages_tokens_then_the_rendered_answer(
     ]
     assert events[6][1] == '<li class="stage-done">done</li>'
     done = events[-1][1]
-    assert '<strong>refresh grant</strong> [<a class="cite" href="#source-1">1</a>]' in done
+    assert '<strong>refresh grant</strong> <span class="cites"><a class="cite"' in done
     assert '<h2 id="sources-heading">Sources</h2>' in done
     assert '<li id="source-1">' in done
     assert "Base Protocol › Authorization › Refresh Tokens" in done
@@ -286,7 +291,11 @@ def test_answers_without_citations_have_no_panel(client: TestClient, graph: Fake
 
 
 def cite(n: int) -> str:
-    return f'<a class="cite" href="#source-{n}">{n}</a>'
+    return f'<a class="cite" href="#source-{n}" aria-label="Source {n}">{n}</a>'
+
+
+def cites(*numbers: int) -> str:
+    return '<span class="cites">' + "".join(cite(n) for n in numbers) + "</span>"
 
 
 CODE_SPANS = "<p><code>items[0]</code> and <code>a[1]</code></p>"
@@ -296,13 +305,14 @@ CODE_BLOCK = "<pre><code>x = y[1]\n</code></pre>"
 @pytest.mark.parametrize(
     ("rendered", "numbers", "expected"),
     [
-        ("<p>A [1].</p>", [1], f"<p>A [{cite(1)}].</p>"),
-        ("<p>B [1][3]</p>", [1, 3], f"<p>B [{cite(1)}][{cite(3)}]</p>"),
-        ("<p>C [3, 1]</p>", [1, 3], f"<p>C [{cite(3)}, {cite(1)}]</p>"),
+        ("<p>A [1].</p>", [1], f"<p>A {cites(1)}.</p>"),
+        ("<p>B [1][3]</p>", [1, 3], f"<p>B {cites(1, 3)}</p>"),
+        ("<p>C [3, 1]</p>", [1, 3], f"<p>C {cites(3, 1)}</p>"),
         ("<p>Not cited [7]</p>", [1], "<p>Not cited [7]</p>"),
         ("<p>Partly [1, 7]</p>", [1], "<p>Partly [1, 7]</p>"),
+        ("<p>Partly [1][7]</p>", [1], "<p>Partly [1][7]</p>"),
         (CODE_SPANS, [1], CODE_SPANS),
-        (f"{CODE_BLOCK}<p>[1]</p>", [1], f"{CODE_BLOCK}<p>[{cite(1)}]</p>"),
+        (f"{CODE_BLOCK}<p>[1]</p>", [1], f"{CODE_BLOCK}<p>{cites(1)}</p>"),
     ],
 )
 def test_link_citations(rendered: str, numbers: list[int], expected: str) -> None:
@@ -377,7 +387,8 @@ def test_evals_lists_runs_newest_first(eval_client: TestClient) -> None:
     assert '<td class="num">50%</td>' in page
     assert '<td class="num">-</td>' in page  # correct_declines is None
     assert '<td class="num">4.2s</td>' in page
-    assert '<a href="/evals">Evals</a>' in page
+    assert '<a href="/evals" aria-current="page">Evals</a>' in page
+    assert "(used because they're free;" in page
 
 
 def test_evals_page_without_runs(tmp_path: Path, graph: FakeGraph) -> None:

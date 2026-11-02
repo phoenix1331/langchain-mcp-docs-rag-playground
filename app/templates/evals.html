@@ -1,9 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Eval runs · MCP docs assistant{% endblock %}
+{% block title %}Eval runs - MCP docs assistant{% endblock %}
+{% block body_class %}wide{% endblock %}
+{% block nav_evals %}aria-current="page"{% endblock %}
 {% block content %}
-<h1 class="page-title">Eval runs</h1>
-<p class="lede">Each run asks the question set through the graph and scores it. Run more with
-  <code>make evals</code>; compare in the terminal with <code>make evals-compare</code>.</p>
+<section class="intro">
+  <h1>Eval runs</h1>
+  <p>Each run asks the question set through the graph and scores it. Start one with
+    <code>make evals</code> and compare runs in the terminal with <code>make evals-compare</code>.</p>
+  <p class="note">The runs here use free-tier models: Gemini 3.1 Flash-Lite for routing, grading,
+    answers and judging, and Voyage for embeddings and reranking (used because they're free;
+    larger models will return better results).</p>
+</section>
 {% if runs %}
 <div class="table-wrap">
   <table class="data">
@@ -48,6 +55,6 @@
   </table>
 </div>
 {% else %}
-<p class="muted">No eval runs yet. Run <code>make evals ARGS="--label baseline"</code>.</p>
+<p class="empty">No eval runs yet. Start one with <code>make evals ARGS="--label baseline"</code>.</p>
 {% endif %}
 {% endblock %}

@@ -61,6 +61,8 @@ allowed-confusables = ["›"]
 testpaths = ["tests"]
 addopts = "-ra"
 markers = ["db: needs the live Postgres database (skipped when unreachable)"]
+# langsmith's own ast.Str use (not ours); remove when langsmith drops it.
+filterwarnings = ["ignore:ast.Str is deprecated:DeprecationWarning:langsmith"]
 
 [tool.coverage.run]
 source = ["app", "ingest"]

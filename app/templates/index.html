@@ -1,26 +1,34 @@
 {% extends "base.html" %}
+{% block nav_ask %}aria-current="page"{% endblock %}
 {% block content %}
+<section class="intro">
+  <h1>Ask the MCP specification</h1>
+  <p>Answers come only from the docs for the release you choose, and every claim is cited to its section.</p>
+</section>
+
 <form class="ask" hx-post="/ask" hx-target="#answer" hx-swap="innerHTML"
       hx-indicator="#working" hx-disabled-elt="find button"
       hx-on::after-request="if (event.detail.successful) this.querySelector('textarea').value = ''">
   <label class="visually-hidden" for="question">Question</label>
   <textarea id="question" name="question" rows="3" maxlength="{{ max_chars }}" required
-            placeholder="e.g. How does a client refresh an OAuth access token?"></textarea>
-  <div class="ask-controls">
-    <label for="version">Spec version</label>
-    <select id="version" name="version">
-      {% for version in versions %}
-      <option value="{{ version }}" {% if version == latest %}selected{% endif %}>
-        {{ version }}{% if version == latest %} (latest){% endif %}
-      </option>
-      {% endfor %}
-      <option value="{{ all }}">All versions</option>
-    </select>
+            placeholder="How does a client refresh an OAuth access token?"></textarea>
+
+  <div class="ask-actions">
+    <label class="version-picker">
+      <span>Spec release</span>
+      <select id="version" name="version">
+        {% for version in versions %}
+        <option value="{{ version }}" {% if version == latest %}selected{% endif %}>{{ version }}{% if version == latest %} (latest){% endif %}</option>
+        {% endfor %}
+        <option value="{{ all }}">All versions</option>
+      </select>
+    </label>
+    <span class="hint">Ctrl + Enter to ask</span>
     <button type="submit">Ask</button>
   </div>
 </form>
 
-<p id="working" class="working" role="status">Starting...</p>
+<p id="working" class="working" role="status">Sending your question...</p>
 
 <section id="answer" aria-live="polite"></section>
 {% endblock %}

@@ -9,3 +9,12 @@ document.addEventListener("htmx:sseError", (event) => {
     body.innerHTML = '<p class="error" role="alert">The connection dropped before the answer finished. Ask again to retry.</p>';
   }
 });
+
+// Ctrl+Enter (Cmd+Enter on a Mac) asks from inside the question box.
+document.addEventListener("keydown", (event) => {
+  const box = event.target;
+  if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
+  if (!(box instanceof HTMLTextAreaElement) || !box.form) return;
+  event.preventDefault();
+  box.form.requestSubmit();
+});

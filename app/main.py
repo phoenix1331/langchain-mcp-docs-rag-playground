@@ -30,7 +30,6 @@ from markdown_it import MarkdownIt
 from app.config import get_settings
 from app.db import make_engine
 from app.graph.build import build_question_graph
-from app.graph.nodes import CITATION_PATTERN
 from app.graph.progress import describe_result, describe_start
 from app.retrieval.scope import ALL
 from app.retrieval.search import Search
@@ -82,21 +81,30 @@ def render_markdown(text: str) -> str:
 _CODE = re.compile(r"(<pre>.*?</pre>|<code>.*?</code>)", re.S)
 
 
+# A run of citations: `[1]`, `[1][3]` or `[1, 3]`, possibly several in a row.
+_CITATION_RUN = re.compile(r"(?:\[\d+(?:\s*,\s*\d+)*\])+")
+
+
 def link_citations(rendered: str, numbers: list[int]) -> str:
-    """Turn `[n]`, `[n][m]` and `[n, m]` into links to `#source-n` for cited numbers."""
+    """Turn citation runs into chips linking to `#source-n`, when every number was cited.
+
+    The brackets are dropped: each chip is a link labelled "Source n", and a run is kept
+    together in one `.cites` span so it never wraps apart.
+    """
     known = set(numbers)
 
     def link(match: re.Match[str]) -> str:
-        parts = [int(n) for n in match.group(1).split(",")]
+        parts = [int(n) for n in re.findall(r"\d+", match.group(0))]
         if not all(n in known for n in parts):
             return match.group(0)
-        links = ", ".join(f'<a class="cite" href="#source-{n}">{n}</a>' for n in parts)
-        return f"[{links}]"
+        chips = "".join(
+            f'<a class="cite" href="#source-{n}" aria-label="Source {n}">{n}</a>' for n in parts
+        )
+        return f'<span class="cites">{chips}</span>'
 
     pieces = _CODE.split(rendered)
     return "".join(
-        piece if index % 2 else CITATION_PATTERN.sub(link, piece)
-        for index, piece in enumerate(pieces)
+        piece if index % 2 else _CITATION_RUN.sub(link, piece) for index, piece in enumerate(pieces)
     )
 
 
