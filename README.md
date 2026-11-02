@@ -199,7 +199,7 @@ What the runs say, and how far to trust it:
 
 - **Reranking is the change that helped.** It fixed a cross-version question and every "this release does not have that feature" question, and is the best configuration overall.
 - **Grading and the rewrite loop did not earn their extra model call here.** They declined one answerable question ("How long can tool names be?") because only one chunk was relevant and the threshold is two, and fixed nothing the reranked search missed. A threshold of one, or a stronger grading model, may change that.
-- **Two failures are the same in every configuration**, so they are not about search: the router declines "How does ping work?" and a question about how tasks changed as off topic, and "Is ping still part of MCP?" never retrieves the 2026-07-28 changelog that says ping was removed.
+- **Three failures are the same in every configuration**, so no search change fixes them: the router declines "How does ping work?" and a question about how tasks changed as off topic, and "Is ping still part of MCP?" never retrieves the 2026-07-28 changelog that says ping was removed.
 - **The differences are small.** One question is about two percentage points, most gaps are one to three questions, and a model does not give identical answers twice, so a rerun can move a configuration by a few points. The judge is also the answering model grading its own work, which can be lenient. Treat the ordering as indicative; set `JUDGE_MODEL` to a different provider and run each configuration more than once before relying on it.
 
 ![Eval runs with their configuration and scores](docs/screenshots/evals.png)
