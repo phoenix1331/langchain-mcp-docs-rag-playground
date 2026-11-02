@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ run.label }} · Eval runs{% endblock %}
+{% block content %}
+<p class="breadcrumb"><a href="/evals">Eval runs</a></p>
+<h1 class="page-title">{{ run.label or run.file }}
+  {% if not run.complete %}<span class="badge">partial</span>{% endif %}</h1>
+<p class="lede">{{ (run.started_at or "") | stamp }} · {{ (run.config or {}) | config }}
+  · {{ (run.summary or {}).questions or 0 }} questions</p>
+
+<details class="config">
+  <summary>Configuration</summary>
+  <dl>
+    {% for key, value in (run.config or {}).items() %}
+    <dt>{{ key }}</dt><dd>{{ value }}</dd>
+    {% endfor %}
+  </dl>
+</details>
+
+<p class="filter">
+  {% if only == "failed" %}
+  Showing failures only · <a href="/evals/{{ run_id }}">show all</a>
+  {% else %}
+  <a href="/evals/{{ run_id }}?only=failed">Show failures only</a>
+  {% endif %}
+</p>
+
+<ol class="results">
+  {% for r in results %}
+  <li class="result {% if r.passed %}passed{% else %}failed{% endif %}">
+    <details>
+      <summary>
+        <span class="verdict">{% if r.error %}error{% elif r.passed %}pass{% else %}fail{% endif %}</span>
+        <span class="result-id">{{ r.id }}</span>
+        <span class="muted small">{{ r.category }} · {{ r.spec_version }}{% if r.outcome %} · {{ r.outcome }}{% endif %}</span>
+        <span class="result-scores small">
+          {% if r.facts_found %}facts {{ r.facts_found | select | list | length }}/{{ r.facts_found | length }}{% endif %}
+          {% if r.retrieval_hit is not none and r.retrieval_hit is defined %} · {{ "retrieved" if r.retrieval_hit else "missed sources" }}{% endif %}
+          {% if r.seconds is defined %} · {{ r.seconds }}s{% endif %}
+        </span>
+      </summary>
+      <div class="result-body">
+        <p><strong>Question:</strong> {{ r.question }}</p>
+        {% if r.error %}
+        <p class="error" role="alert">{{ r.error }}</p>
+        {% else %}
+        <div class="rendered">{{ (r.answer or "") | markdown | safe }}</div>
+        {% if r.judge_reason %}<p><strong>Judge:</strong> {{ r.judge_reason }}</p>{% endif %}
+        {% if r.retrieved %}
+        <p><strong>Retrieved:</strong></p>
+        <ul class="paths">{% for path in r.retrieved %}<li>{{ path }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if r.cited %}
+        <p><strong>Cited:</strong></p>
+        <ul class="paths">{% for path in r.cited %}<li>{{ path }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% endif %}
+      </div>
+    </details>
+  </li>
+  {% else %}
+  <li class="muted">No questions to show.</li>
+  {% endfor %}
+</ol>
+{% endblock %}

@@ -1,0 +1,345 @@
+{
+  "label": "hybrid-rerank",
+  "started_at": "20261102T092754Z",
+  "config": {
+    "router_model": "google_genai:gemini-3.1-flash-lite",
+    "answer_model": "google_genai:gemini-3.1-flash-lite",
+    "judge_model": "google_genai:gemini-3.1-flash-lite",
+    "embed_model": "voyageai:voyage-4",
+    "rerank_model": "voyageai:rerank-2.5",
+    "mode": "hybrid",
+    "rerank": true,
+    "grading": false,
+    "top_k": 20,
+    "rerank_top_n": 6,
+    "relevance_threshold": 2,
+    "max_rewrites": 2
+  },
+  "results": [
+    {
+      "id": "discover-purpose",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "What is server/discover used for?",
+      "error": null,
+      "answer": "The `server/discover` method is used by a client to query a server for its identity, supported protocol versions, and capabilities before sending other requests [2][4].\n\nAccording to the specification for version 2026-07-28, its primary uses include:\n\n*   **Retrieving Server Metadata:** It provides a convenient way to fetch a server's capabilities and supported versions in a single request, rather than probing for them individually using separate requests like `tools/list`, `prompts/list`, or `resources/list` [1][5].\n*   **Stdio Backward Compatibility:** When using the stdio transport, `server/discover` is recommended as a probe to determine if a server supports modern (per-request `_meta`) or legacy (`initialize` handshake) communication patterns [1].\n*   **Caching:** The discovery response includes a `ttlMs` (time-to-live) and `cacheScope`, allowing clients to cache the server's information and avoid repeating the discovery process for every request [3][6].\n\nWhile servers **MUST** implement `server/discover`, calling it is optional for clients [2][4]. Clients may choose to invoke other RPC methods inline and handle an `UnsupportedProtocolVersionError` if the server does not support the requested version [1][5].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 10.2,
+      "tokens": 2517,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly addresses all three key facts regarding the server/discover method.",
+      "judge_tokens": 435,
+      "retrieved": [
+        "docs/specification/2026-07-28/server/discover.mdx",
+        "docs/specification/2026-07-28/server/discover.mdx",
+        "docs/docs/2026-07-28/learn/architecture.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/docs/2026-07-28/learn/architecture.mdx",
+        "docs/specification/2026-07-28/schema.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/server/discover.mdx",
+        "docs/specification/2026-07-28/server/discover.mdx",
+        "docs/docs/2026-07-28/learn/architecture.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/docs/2026-07-28/learn/architecture.mdx",
+        "docs/specification/2026-07-28/schema.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "result-type-values",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "What values can the resultType field of a result have?",
+      "error": null,
+      "answer": "The `resultType` field can have the following values:\n\n*   `\"complete\"`: Indicates the request completed successfully and the result contains the final content [1][2].\n*   `\"input_required\"`: Indicates the request is incomplete and requires additional information; the result contains an `InputRequiredResult` object with instructions for the client to provide input before retrying [1][2].\n*   Any other `string` value: Extensions may add additional values, provided they are part of the core protocol or supported extensions advertised via capabilities [1][2].\n\nAny `resultType` value that is unrecognized by the client must be considered invalid [1]. For backward compatibility, if a client receives a result from a server implementing an earlier protocol version that does not include the `resultType` field, the client must treat the absent field as `\"complete\"` [1][3][4][5][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 6.8,
+      "tokens": 2519,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly states both key facts regarding the 'complete' and 'input_required' result types.",
+      "judge_tokens": 350,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "mrtr-input-required",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "What does an InputRequiredResult contain in the multi round-trip request pattern?",
+      "error": null,
+      "answer": "In the 2026-07-28 specification, an `InputRequiredResult` is a type of `Result` used by a server to indicate that additional input is required before a request can be completed [2].\n\nAn `InputRequiredResult` contains the following fields:\n\n*   `resultType`: A `string` that indicates the type of the result, allowing the client to determine how to parse the object [1][3].\n*   `inputRequests` (optional): A map of server-initiated requests that the client must fulfill [2]. These keys are server-assigned identifiers that must be unique within the scope of the request [5]. The values must be one of `ElicitRequest`, `CreateMessageRequest`, or `ListRootsRequest` [5].\n*   `requestState` (optional): An opaque string that is meaningful only to the server [2]. Clients must not inspect, parse, modify, or make assumptions about its contents [2].\n*   `_meta` (optional): Inherited from `Result`, this field provides metadata [1][3].\n\nAt least one of `inputRequests` or `requestState` **must** be present in the result [1]. Additionally, the object may contain other fields as defined by `[key: string]: unknown` [3].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 8.3,
+      "tokens": 2501,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly lists and describes the inputRequests map, the opaque requestState string, and the client's obligation not to inspect or modify that state.",
+      "judge_tokens": 461,
+      "retrieved": [
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/basic/patterns/mrtr.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/basic/patterns/mrtr.mdx",
+        "docs/specification/2026-07-28/basic/patterns/mrtr.mdx",
+        "docs/specification/2026-07-28/server/tools.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/basic/patterns/mrtr.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/basic/patterns/mrtr.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "subscriptions-listen",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How does a client receive list change notifications from a server?",
+      "error": null,
+      "answer": "To receive list change notifications, a client must open a long-lived notification stream by sending a `subscriptions/listen` request to the server [1][3].\n\nIn this request, the client must include a `notifications` filter that explicitly specifies which event types it wishes to receive [6]. The server is prohibited from sending notification types that the client has not requested [6]. Once the request is sent, the server acknowledges the stream, which remains open to carry the requested notifications [1][3].\n\nSpecific details regarding list change notifications for the 2026-07-28 version include:\n\n*   **Tools:** If a server has declared the `listChanged` capability, it should send a `notifications/tools/list_changed` notification to clients that have requested `toolsListChanged: true` via the `subscriptions/listen` stream [4].\n*   **Prompts:** If a server has declared the `listChanged` capability, it should send a `notifications/prompts/list_changed` notification to clients that have requested `promptsListChanged: true` via the `subscriptions/listen` stream [5].\n*   **Stream State:** The stream state is scoped to the `subscriptions/listen` request; if the underlying channel is lost, the client must re-issue the request [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.4,
+      "tokens": 1941,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly confirms the client sends the request, establishes a long-lived stream, and uses specific filters to opt into notification types.",
+      "judge_tokens": 466,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/patterns/index.mdx",
+        "docs/docs/2026-07-28/learn/architecture.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/server/tools.mdx",
+        "docs/specification/2026-07-28/server/prompts.mdx",
+        "docs/specification/2026-07-28/basic/patterns/subscriptions.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/patterns/index.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/server/tools.mdx",
+        "docs/specification/2026-07-28/server/prompts.mdx",
+        "docs/specification/2026-07-28/basic/patterns/subscriptions.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "caching-ttl",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How do ttlMs and cacheScope control caching of list results?",
+      "error": null,
+      "answer": "In the MCP specification (version 2026-07-28), `ttlMs` and `cacheScope` provide hints to the client regarding how to cache list results [1][2][4][5].\n\n### `ttlMs` (Time-to-Live)\nThe `ttlMs` field is a hint in milliseconds indicating how long a client may cache a response before re-fetching [1][2][4][5]. Its semantics are analogous to HTTP `Cache-Control: max-age` [1][2][4][5]:\n*   **If 0:** The response should be considered immediately stale, and the client may re-fetch the result every time it is needed [1][2][4][5].\n*   **If positive:** The client should consider the result fresh for the specified number of milliseconds after receiving it [1][2][4][5].\n\nWhen results are paginated, each page is treated as an independently cacheable response with its own `ttlMs` value, and the freshness clock for each page begins when that specific page is received [3].\n\n### `cacheScope`\nThe `cacheScope` field indicates the intended scope of the cached response, analogous to HTTP `Cache-Control: public` vs `private` [1][2][4][5]:\n*   **`\"public\"`:** The response contains no user-specific data. Any client or intermediary (such as a shared gateway or proxy) may cache the response and serve it across different authorization contexts [1][2][4][5].\n*   **`\"private\"`:** The response may only be cached and reused within the same authorization context. Caches must not be shared across different authorization contexts (e.g., different access tokens require different caches) [1][2][4][5].\n\nFor paginated requests, servers must apply the same `cacheScope` to all response pages for a given list request [3].\n\n### Additional Considerations\n*   **Staleness:** Clients should treat a cached list as stale if a `list_changed` notification arrives, even if the `ttlMs` has not yet expired [6].\n*   **Pagination Errors:** If a cursor becomes invalid, the client should discard all cached pages for that list and re-fetch from the beginning [3].\n*   **Consistency:** There is no cross-page consistency guarantee for paginated lists; if a client requires a consistent snapshot of a full list, it should re-fetch from the beginning without using a cursor [3].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.9,
+      "tokens": 2786,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly defines ttlMs as a freshness duration, identifies the two cacheScope values, and explains that a ttlMs of 0 indicates immediate staleness.",
+      "judge_tokens": 731,
+      "retrieved": [
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/server/utilities/caching.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/docs/2026-07-28/develop/clients/client-best-practices.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/server/utilities/caching.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/specification/2026-07-28/schema.mdx",
+        "docs/docs/2026-07-28/develop/clients/client-best-practices.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "resource-not-found-code",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "Which error code does a server return when a requested resource is not found?",
+      "error": null,
+      "answer": "For the 2026-07-28 protocol version, a server **MUST** return the JSON-RPC error code `-32602` (`Invalid Params`) when a requested resource does not exist [1].\n\nAdditionally, for the purpose of backwards compatibility, clients **SHOULD** still accept the error code `-32002` from servers implementing earlier protocol versions, as that code was used for \"resource not found\" in versions 2025-11-25 and earlier [1][2]. Servers implementing the 2026-07-28 specification **MUST NOT** emit the `-32002` code [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 52.1,
+      "tokens": 2417,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly identifies both the current error code and the backwards compatibility requirement for the legacy code.",
+      "judge_tokens": 311,
+      "retrieved": [
+        "docs/specification/2026-07-28/server/resources.mdx",
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/docs/2026-07-28/tools/inspector/protocol-eras.mdx",
+        "docs/specification/2026-07-28/server/utilities/completion.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/server/resources.mdx",
+        "docs/specification/2026-07-28/basic/index.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "stdio-framing",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How are messages framed on the stdio transport, and what can the server write to stderr?",
+      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+      "passed": false
+    },
+    {
+      "id": "streamable-http-headers",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "Which MCP request headers are required on Streamable HTTP POST requests?",
+      "error": null,
+      "answer": "For the 2026-07-28 specification, the following headers are required on all Streamable HTTP POST requests:\n\n*   `MCP-Protocol-Version`: This header must be included in every POST request and its value must match the `io.modelcontextprotocol/protocolVersion` field provided in the request body's `_meta` object [2].\n*   `Mcp-Method`: This header is required for all requests and corresponds to the `method` field in the JSON-RPC body [1].\n\nAdditionally, the `Mcp-Name` header is required for `tools/call`, `resources/read`, and `prompts/get` requests [1]. This header corresponds to the `params.name` or `params.uri` field in the request body [1].\n\nIf any of these required standard headers are missing, the server must treat it as a validation failure [4]. If the `Mcp-Name` value cannot be safely represented as a plain ASCII header, it must be encoded using the Base64 sentinel format [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 52.6,
+      "tokens": 2711,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly states both key facts regarding the purpose and usage of the Mcp-Method and Mcp-Name headers.",
+      "judge_tokens": 410,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx"
+      ],
+      "passed": true
+    }
+  ],
+  "complete": false,
+  "summary": {
+    "questions": 8,
+    "errors": 1,
+    "pass_rate": 1.0,
+    "retrieval_hit_rate": 1.0,
+    "correctness": 1.0,
+    "citation_accuracy": 1.0,
+    "correct_declines": null,
+    "false_declines": 0,
+    "direct_correct": null,
+    "mean_seconds": 20.8,
+    "total_tokens": 20556
+  }
+}

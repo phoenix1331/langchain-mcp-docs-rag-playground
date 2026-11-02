@@ -307,3 +307,106 @@ main { padding-bottom: 4rem; }
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+.site-nav {
+  margin-left: auto;
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.site-nav a { color: var(--accent); }
+
+.page-title { font-size: 1.4rem; margin: 0 0 0.25rem; }
+.lede { color: var(--muted); margin-top: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 0.8rem; }
+.breadcrumb { margin: 0 0 0.5rem; font-size: 0.85rem; }
+.breadcrumb a, .filter a, .data a { color: var(--accent); }
+
+main:has(.data) { max-width: 72rem; }
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.data th, .data td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.data tbody tr:last-child td { border-bottom: 0; }
+.data .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.config dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 1rem;
+  font-size: 0.85rem;
+}
+
+.config dt { color: var(--muted); }
+.config dd { margin: 0; overflow-wrap: anywhere; }
+
+.results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.result {
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 8px;
+  background: var(--surface);
+  margin-bottom: 0.5rem;
+}
+
+.result.passed { border-left-color: var(--accent); }
+.result.failed { border-left-color: var(--error); }
+
+.result summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+
+.verdict {
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.result.passed .verdict { color: var(--accent); }
+.result.failed .verdict { color: var(--error); }
+.result-id { font-weight: 600; }
+.result-scores { color: var(--muted); margin-left: auto; }
+
+.result-body {
+  padding: 0 0.75rem 0.75rem;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.paths {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+}

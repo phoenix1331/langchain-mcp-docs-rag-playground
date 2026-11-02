@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Eval runs · MCP docs assistant{% endblock %}
+{% block content %}
+<h1 class="page-title">Eval runs</h1>
+<p class="lede">Each run asks the question set through the graph and scores it. Run more with
+  <code>make evals</code>; compare in the terminal with <code>make evals-compare</code>.</p>
+{% if runs %}
+<div class="table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th scope="col">Run</th>
+        <th scope="col">Config</th>
+        <th scope="col" class="num">Pass</th>
+        <th scope="col" class="num">Retrieval</th>
+        <th scope="col" class="num">Correct</th>
+        <th scope="col" class="num">Citations</th>
+        <th scope="col" class="num">Declines</th>
+        <th scope="col" class="num">False declines</th>
+        <th scope="col" class="num">Time</th>
+        <th scope="col" class="num">Tokens</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for run in runs %}
+      {% set s = run.summary or {} %}
+      <tr>
+        <td>
+          <a href="/evals/{{ run.file[:-5] }}">{{ run.label or run.file }}</a>
+          {% if not run.complete %}<span class="badge">partial</span>{% endif %}
+          <div class="muted small">{{ (run.started_at or "") | stamp }}</div>
+        </td>
+        <td>
+          {{ (run.config or {}) | config }}
+          <div class="muted small">{{ (run.config or {}).answer_model or "" }}</div>
+        </td>
+        <td class="num">{{ s.pass_rate | pct }}</td>
+        <td class="num">{{ s.retrieval_hit_rate | pct }}</td>
+        <td class="num">{{ s.correctness | pct }}</td>
+        <td class="num">{{ s.citation_accuracy | pct }}</td>
+        <td class="num">{{ s.correct_declines | pct }}</td>
+        <td class="num">{{ s.false_declines if s.false_declines is defined else "-" }}</td>
+        <td class="num">{{ s.mean_seconds if s.mean_seconds is not none else "-" }}s</td>
+        <td class="num">{{ s.total_tokens if s.total_tokens is defined else "-" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="muted">No eval runs yet. Run <code>make evals ARGS="--label baseline"</code>.</p>
+{% endif %}
+{% endblock %}

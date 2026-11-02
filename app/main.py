@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Annotated, Any, Protocol
 from urllib.parse import urlencode
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -34,6 +34,7 @@ from app.graph.nodes import CITATION_PATTERN
 from app.graph.progress import describe_result, describe_start
 from app.retrieval.scope import ALL
 from app.retrieval.search import Search
+from evals.results import RESULTS_DIR, describe_config, format_stamp, load_run, load_runs
 from ingest.fetch import SpecVersions
 
 APP_DIR = Path(__file__).parent
@@ -54,6 +55,7 @@ class Services:
     graph: QuestionGraph
     close: Callable[[], None] = field(default=lambda: None)
     repo_url: str = DEFAULT_REPO_URL  # source files link to `<repo_url>/blob/main/<path>`
+    results_dir: Path = RESULTS_DIR  # saved eval runs for the evals page
 
 
 def build_services() -> Services:
@@ -131,6 +133,9 @@ def create_app(services_factory: Callable[[], Services] = build_services) -> Fas
     templates = Jinja2Templates(directory=APP_DIR / "templates")
     templates.env.filters["markdown"] = render_markdown
     templates.env.filters["link_citations"] = link_citations
+    templates.env.filters["config"] = describe_config
+    templates.env.filters["stamp"] = format_stamp
+    templates.env.filters["pct"] = lambda value: "-" if value is None else f"{value:.0%}"
 
     def error(request: Request, message: str, status_code: int) -> HTMLResponse:
         return templates.TemplateResponse(
@@ -221,6 +226,21 @@ def create_app(services_factory: Callable[[], Services] = build_services) -> Fas
 
         headers = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
         return StreamingResponse(events(), media_type="text/event-stream", headers=headers)
+
+    @app.get("/evals", response_class=HTMLResponse)
+    def evals_index(request: Request) -> HTMLResponse:
+        runs = list(reversed(load_runs(request.app.state.services.results_dir)))
+        return templates.TemplateResponse(request, "evals.html", {"runs": runs})
+
+    @app.get("/evals/{run_id}", response_class=HTMLResponse)
+    def eval_run(request: Request, run_id: str, only: str | None = None) -> HTMLResponse:
+        run = load_run(run_id, request.app.state.services.results_dir)
+        if run is None:
+            raise HTTPException(status_code=404, detail="No such eval run")
+        results = run.get("results", [])
+        shown = [r for r in results if not r.get("passed")] if only == "failed" else results
+        context = {"run": run, "run_id": run_id, "results": shown, "only": only}
+        return templates.TemplateResponse(request, "eval_run.html", context)
 
     return app
 

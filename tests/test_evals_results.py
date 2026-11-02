@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from evals import results as results_module
-from evals.results import compare, describe_config, load_runs, main
+from evals.results import compare, describe_config, format_stamp, load_run, load_runs, main
 
 
 def write_run(directory: Path, name: str, **fields: object) -> None:
@@ -81,3 +81,19 @@ def test_main_prints_the_comparison(
 
     assert main() == 0
     assert "\na " in capsys.readouterr().out
+
+
+def test_load_run_by_stem_only(tmp_path: Path) -> None:
+    write_run(tmp_path, "20261101T000000Z-a.json", label="a")
+
+    assert load_run("20261101T000000Z-a", tmp_path)["file"] == "20261101T000000Z-a.json"
+    assert load_run("20261101T000000Z-a.json", tmp_path) is None
+    assert load_run("../secrets", tmp_path) is None
+
+
+@pytest.mark.parametrize(
+    ("stamp", "text"),
+    [("20261101T203045Z", "2026-11-01 20:30 UTC"), ("yesterday", "yesterday"), ("", "")],
+)
+def test_format_stamp(stamp: str, text: str) -> None:
+    assert format_stamp(stamp) == text

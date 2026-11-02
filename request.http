@@ -47,3 +47,23 @@ POST {{baseUrl}}/ask
 Content-Type: application/x-www-form-urlencoded
 
 question=What is sampling?&version=1999-01-01
+
+### Evals
+
+# Every saved eval run, newest first, with config and scores.
+GET {{baseUrl}}/evals
+
+###
+
+# One run's per-question results (the file name in evals/results/ without .json).
+GET {{baseUrl}}/evals/20261101T203045Z-baseline
+
+###
+
+# Only the questions that failed or errored in that run.
+GET {{baseUrl}}/evals/20261101T203045Z-baseline?only=failed
+
+###
+
+# Unknown run names (and any path outside evals/results/) return 404.
+GET {{baseUrl}}/evals/no-such-run

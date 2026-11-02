@@ -1413,20 +1413,424 @@
         "docs/specification/2026-07-28/client/elicitation.mdx"
       ],
       "passed": true
+    },
+    {
+      "id": "resource-not-found-code-change",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "Did the error code for a missing resource change between versions?",
+      "error": null,
+      "answer": "Yes, the error code for a missing resource changed.\n\n*   **In the 2026-07-28 specification:** Servers **MUST** return error code `-32602` (Invalid Params) when a requested resource does not exist [1]. Servers **MUST NOT** use `-32002` for this purpose, as that code is reserved for earlier versions [2]. However, clients **SHOULD** still accept `-32002` from servers implementing earlier versions for backwards compatibility [1][2].\n*   **In versions 2025-06-18, 2025-03-26, and 2024-11-05:** The specification states that servers **SHOULD** return error code `-32002` when a resource is not found [3][4][5].\n\nAdditionally, servers are prohibited from returning an empty `contents` array for a non-existent resource, as this is considered ambiguous [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 6.5,
+      "tokens": 2109,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly identifies the previous error code and the new error code introduced in the 2026-07-28 specification.",
+      "judge_tokens": 401,
+      "retrieved": [
+        "docs/specification/2026-07-28/server/resources.mdx",
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2025-03-26/server/resources.mdx",
+        "docs/specification/2024-11-05/server/resources.mdx",
+        "docs/specification/2025-06-18/server/resources.mdx",
+        "docs/docs/2026-07-28/tools/inspector/protocol-eras.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/server/resources.mdx",
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2025-03-26/server/resources.mdx",
+        "docs/specification/2024-11-05/server/resources.mdx",
+        "docs/specification/2025-06-18/server/resources.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "ping-removed",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "Is ping still part of MCP?",
+      "error": null,
+      "answer": "Yes, the ping mechanism is part of the Model Context Protocol [1][2][3][4].\n\nIt is an optional mechanism that allows either the client or the server to verify that the other party is responsive and the connection is alive [1][2][3][4]. The functionality is implemented using a request/response pattern, where either party can initiate the process by sending a `ping` request [5][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.3,
+      "tokens": 887,
+      "outcome": "answered",
+      "retrieval_hit": false,
+      "facts_found": [
+        false,
+        false
+      ],
+      "correctness": 0.0,
+      "citation_hit": false,
+      "judge_reason": "The answer does not address the historical existence of ping or its removal in 2026.",
+      "judge_tokens": 228,
+      "retrieved": [
+        "docs/specification/2025-06-18/basic/utilities/ping.mdx",
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx",
+        "docs/specification/2025-03-26/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx",
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-06-18/basic/utilities/ping.mdx",
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx",
+        "docs/specification/2025-03-26/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx",
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx"
+      ],
+      "passed": false
+    },
+    {
+      "id": "elicitation-absent-2024",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2024-11-05",
+      "question": "How does elicitation work?",
+      "error": null,
+      "answer": "Elicitation is a feature of the Tasks extension, which allows a server to request additional input from a client during a long-running process [3].\n\nAccording to the Tasks extension documentation, the process works as follows:\n\n*   **Triggering:** If a task moves to an `input_required` state, the response to the `tasks/get` method will include an `inputRequests` map [3].\n*   **Content:** This map contains the specific elicitations or other server requests required to proceed with the task [3].\n*   **Fulfillment:** The client fulfills these requests by calling the `tasks/update` method [3].\n\nPlease note that while this information is provided in the extension documentation, the 2024-11-05 specification sources do not mention tasks or elicitation [1][5][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.3,
+      "tokens": 1609,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the 2024-11-05 specification does not mention elicitation.",
+      "judge_tokens": 323,
+      "retrieved": [
+        "docs/docs/2024-11-05/learn/server-concepts.mdx",
+        "docs/extensions/apps/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/apps/overview.mdx",
+        "docs/specification/2024-11-05/server/prompts.mdx",
+        "docs/docs/2024-11-05/learn/server-concepts.mdx"
+      ],
+      "cited": [
+        "docs/docs/2024-11-05/learn/server-concepts.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/specification/2024-11-05/server/prompts.mdx",
+        "docs/docs/2024-11-05/learn/server-concepts.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "authorization-absent-2024",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2024-11-05",
+      "question": "How does authorization work in MCP?",
+      "error": null,
+      "answer": "Authorization in the Model Context Protocol (MCP) is designed to secure access to sensitive resources and operations by ensuring that only permitted users can access an MCP server's endpoints [6].\n\n### Core Principles\n*   **Standardized Flows:** MCP uses standardized authorization flows to build trust between clients and servers [6].\n*   **OAuth 2.1:** The protocol follows the conventions outlined for OAuth 2.1 rather than focusing on one specific identity system [6].\n*   **User-Driven Model:** In a standard deployment, each user independently authorizes an MCP client to access each MCP server, which provides individuals with control over their data [3].\n\n### Implementation and Security Best Practices\nFor the 2024-11-05 version, the following guidance is provided for implementing authorization:\n*   **Token Validation:** Servers can implement token introspection (e.g., via Keycloak) to ensure tokens received from clients are valid [2].\n*   **Session Management:** The `Mcp-Session-Id` should be treated as untrusted input and never used to tie authorization to a session. It should be validated server-side and regenerated whenever authorization changes [1].\n*   **Error Handling:** To prevent error detail leakage, servers should return generic messages to clients while logging detailed reasons internally using correlation IDs [1].\n*   **Logging:** Implementing basic logging is recommended to assist in diagnosing issues [2].\n\n### Enterprise Considerations\nThe standard user-driven model can create security gaps and friction in enterprise environments [3]. To address this, **Enterprise-Managed Authorization** (an extension) allows an organization's Identity Provider (IdP) to act as the authoritative decision-maker, granting or denying access based on organizational policy rather than individual user authorization [3].\n\n*Note: The provided specification sources for version 2024-11-05 do not contain the full technical details of the authorization specification; they refer to the [Authorization specification](/specification/2025-03-26/basic/authorization) for further information [6].*",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 8.4,
+      "tokens": 1706,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the 2024-11-05 specification does not contain the full technical details and refers to a later specification for authorization.",
+      "judge_tokens": 600,
+      "retrieved": [
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/extensions/apps/overview.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx"
+      ],
+      "cited": [
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "tasks-absent-2025-06",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2025-06-18",
+      "question": "How do I poll a long-running task for its result?",
+      "error": null,
+      "answer": "To poll for the result of a long-running task, the client uses the `tasks/get` method [1].\n\nThe process for polling is as follows:\n\n*   **Initiation:** After receiving a `CreateTaskResult` (with `resultType: \"task\"`) from a server, the client uses the provided `taskId` to initiate polling [1][3].\n*   **Polling:** The client calls `tasks/get` with the `taskId` [1]. It should respect the `pollIntervalMs` suggested by the server [3][4].\n*   **Handling Responses:** The server returns the current status of the task [1]. The client continues to poll until the task reaches a terminal status, which includes `completed`, `failed`, or `cancelled` [4].\n*   **Retrieving Results:** When the status reaches `completed`, the `result` field in the response contains the data that the original request would have returned synchronously [1]. If the status is `failed`, the `error` field contains the JSON-RPC error [1].\n\nThe provided sources are Extension documentation and do not specify if these features are part of the 2025-06-18 specification version.",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 8.2,
+      "tokens": 2397,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        false
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer does not mention the 2025-06-18 specification version or its lack of task definitions.",
+      "judge_tokens": 414,
+      "retrieved": [
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/overview.mdx"
+      ],
+      "cited": [
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx"
+      ],
+      "passed": false
+    },
+    {
+      "id": "discover-absent-2025-11",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2025-11-25",
+      "question": "What does server/discover return?",
+      "error": null,
+      "answer": "The `server/discover` method returns a response containing the server's supported protocol versions, its capabilities, and metadata [4].\n\nAccording to the specification, the response includes the following fields:\n\n*   `resultType`: Indicates the completion status of the discovery [4].\n*   `supportedVersions`: A list of protocol versions supported by the server [4].\n*   `capabilities`: An object defining the server's capabilities, including an `extensions` field where servers advertise support for specific extensions [4].\n*   `_meta`: Contains server information, such as the server's `name` and `version` [4].\n*   `ttlMs` and `cacheScope`: Configuration for caching the discovery result [4].\n\nAdditionally, for servers that support the Skills extension, the `capabilities` object must declare the `resources` capability and the `io.modelcontextprotocol/skills` extension [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.1,
+      "tokens": 1864,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        false
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer describes the contents of a server/discover response instead of stating that the method is not defined in the specified version of the protocol.",
+      "judge_tokens": 338,
+      "retrieved": [
+        "docs/extensions/overview.mdx",
+        "docs/extensions/skills/overview.mdx",
+        "docs/specification/2025-11-25/client/roots.mdx",
+        "docs/extensions/overview.mdx",
+        "docs/specification/2025-11-25/server/prompts.mdx",
+        "docs/specification/2025-11-25/index.mdx"
+      ],
+      "cited": [
+        "docs/extensions/skills/overview.mdx",
+        "docs/extensions/overview.mdx"
+      ],
+      "passed": false
+    },
+    {
+      "id": "banana-bread",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "2026-07-28",
+      "question": "What's a good recipe for banana bread?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 3.4,
+      "tokens": 193,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "capital-of-france",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "all",
+      "question": "What is the capital of France?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 3.7,
+      "tokens": 187,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "python-sort",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "2026-07-28",
+      "question": "How do I sort a list of dictionaries by a key in Python?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 0.9,
+      "tokens": 196,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "kubernetes-pods",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "all",
+      "question": "What is a Kubernetes pod?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 6.0,
+      "tokens": 193,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "greeting",
+      "category": "direct",
+      "expected": "direct",
+      "spec_version": "2026-07-28",
+      "question": "Hi there!",
+      "error": null,
+      "answer": "Hello! I'm here to help you navigate the Model Context Protocol documentation, including the specification, SDKs, and tools like the Inspector. Feel free to ask me anything about MCP, and I'll provide answers with citations from the official docs!",
+      "steps": [
+        "route",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 11.1,
+      "tokens": 316,
+      "outcome": "direct",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "what-can-you-do",
+      "category": "direct",
+      "expected": "direct",
+      "spec_version": "2026-07-28",
+      "question": "What can you help me with?",
+      "error": null,
+      "answer": "I can help you navigate the Model Context Protocol documentation, including the specification, implementation guides, SDKs, and the Inspector tool. Feel free to ask me any questions about these resources, and I will provide answers with citations from the relevant sections of the documentation.",
+      "steps": [
+        "route",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 6.6,
+      "tokens": 335,
+      "outcome": "direct",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
     }
   ],
-  "complete": false,
+  "complete": true,
   "summary": {
-    "questions": 34,
+    "questions": 46,
     "errors": 0,
-    "pass_rate": 0.912,
-    "retrieval_hit_rate": 0.882,
-    "correctness": 0.833,
-    "citation_accuracy": 0.882,
-    "correct_declines": null,
+    "pass_rate": 0.87,
+    "retrieval_hit_rate": 0.861,
+    "correctness": 0.815,
+    "citation_accuracy": 0.861,
+    "correct_declines": 0.75,
     "false_declines": 2,
-    "direct_correct": null,
-    "mean_seconds": 7.4,
-    "total_tokens": 83435
+    "direct_correct": 1.0,
+    "mean_seconds": 7.1,
+    "total_tokens": 97731
   }
 }

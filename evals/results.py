@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from evals.run import RESULTS_DIR
+RESULTS_DIR = Path(__file__).parent / "results"
 
 COLUMNS = (
     ("pass_rate", "pass"),
@@ -23,6 +23,25 @@ def load_runs(directory: Path = RESULTS_DIR) -> list[dict[str, Any]]:
         run["file"] = path.name
         runs.append(run)
     return runs
+
+
+def load_run(run_id: str, directory: Path = RESULTS_DIR) -> dict[str, Any] | None:
+    """One run by file stem, or None. Only names of existing result files are accepted,
+    so a request cannot read any other path."""
+    paths = {path.stem: path for path in directory.glob("*.json")}
+    path = paths.get(run_id)
+    if path is None:
+        return None
+    run = json.loads(path.read_text(encoding="utf-8"))
+    run["file"] = path.name
+    return run
+
+
+def format_stamp(stamp: str) -> str:
+    """`20261101T203045Z` -> `2026-11-01 20:30 UTC`; anything else is returned as is."""
+    if len(stamp) != 16 or stamp[8] != "T":
+        return stamp
+    return f"{stamp[:4]}-{stamp[4:6]}-{stamp[6:8]} {stamp[9:11]}:{stamp[11:13]} UTC"
 
 
 def describe_config(config: dict[str, Any]) -> str:

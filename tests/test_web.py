@@ -1,4 +1,6 @@
+import json
 from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -305,3 +307,110 @@ CODE_BLOCK = "<pre><code>x = y[1]\n</code></pre>"
 )
 def test_link_citations(rendered: str, numbers: list[int], expected: str) -> None:
     assert link_citations(rendered, numbers) == expected
+
+
+def eval_run(label: str, complete: bool = True) -> dict[str, Any]:
+    return {
+        "label": label,
+        "started_at": "20261101T203045Z",
+        "complete": complete,
+        "config": {"mode": "hybrid", "rerank": True, "grading": True, "answer_model": "fake:a"},
+        "summary": {
+            "questions": 2,
+            "pass_rate": 0.5,
+            "retrieval_hit_rate": 1.0,
+            "correctness": 0.75,
+            "citation_accuracy": 1.0,
+            "correct_declines": None,
+            "false_declines": 0,
+            "mean_seconds": 4.2,
+            "total_tokens": 1234,
+        },
+        "results": [
+            {
+                "id": "good-one",
+                "category": "version_specific",
+                "spec_version": "2026-07-28",
+                "outcome": "answered",
+                "passed": True,
+                "error": None,
+                "question": "What is it?",
+                "answer": "It is **this** [1]. <script>x</script>",
+                "facts_found": [True, True],
+                "retrieval_hit": True,
+                "judge_reason": "both facts stated",
+                "retrieved": ["docs/a.mdx"],
+                "cited": ["docs/a.mdx"],
+                "seconds": 4.0,
+            },
+            {
+                "id": "broken-one",
+                "category": "cross_version",
+                "spec_version": "all",
+                "passed": False,
+                "error": "GoogleAPIError: 503 UNAVAILABLE",
+                "question": "What changed?",
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def eval_client(tmp_path: Path, graph: FakeGraph) -> Iterator[TestClient]:
+    (tmp_path / "20261101T203045Z-baseline.json").write_text(json.dumps(eval_run("baseline")))
+    (tmp_path / "20261102T090000Z-partial.json").write_text(json.dumps(eval_run("partial", False)))
+    (tmp_path / ".gitkeep").write_text("")
+    services = Services(versions=VERSIONS, graph=graph, results_dir=tmp_path)
+    with TestClient(create_app(lambda: services)) as test_client:
+        yield test_client
+
+
+def test_evals_lists_runs_newest_first(eval_client: TestClient) -> None:
+    page = eval_client.get("/evals").text
+
+    assert page.index("partial</a>") < page.index("baseline</a>")
+    assert '<a href="/evals/20261101T203045Z-baseline">baseline</a>' in page
+    assert '<span class="badge">partial</span>' in page
+    assert "2026-11-01 20:30 UTC" in page
+    assert "hybrid + rerank + grading" in page
+    assert "fake:a" in page
+    assert '<td class="num">50%</td>' in page
+    assert '<td class="num">-</td>' in page  # correct_declines is None
+    assert '<td class="num">4.2s</td>' in page
+    assert '<a href="/evals">Evals</a>' in page
+
+
+def test_evals_page_without_runs(tmp_path: Path, graph: FakeGraph) -> None:
+    services = Services(versions=VERSIONS, graph=graph, results_dir=tmp_path)
+    with TestClient(create_app(lambda: services)) as test_client:
+        assert "No eval runs yet." in test_client.get("/evals").text
+
+
+def test_eval_run_shows_every_question(eval_client: TestClient) -> None:
+    page = eval_client.get("/evals/20261101T203045Z-baseline").text
+
+    assert "<dt>answer_model</dt><dd>fake:a</dd>" in page
+    assert '<span class="result-id">good-one</span>' in page
+    assert '<span class="result-id">broken-one</span>' in page
+    assert "facts 2/2" in page
+    assert "retrieved" in page
+    assert "<strong>this</strong> [1]" in page
+    assert "<script>x" not in page  # answers are escaped
+    assert "both facts stated" in page
+    assert "GoogleAPIError: 503 UNAVAILABLE" in page
+    assert '<a href="/evals/20261101T203045Z-baseline?only=failed">' in page
+
+
+def test_eval_run_failures_only(eval_client: TestClient) -> None:
+    page = eval_client.get("/evals/20261101T203045Z-baseline", params={"only": "failed"}).text
+
+    assert "good-one" not in page
+    assert "broken-one" in page
+    assert "Showing failures only" in page
+
+
+@pytest.mark.parametrize(
+    "run_id", ["nope", "..%2F..%2Fapp%2Fconfig", "20261101T203045Z-baseline.json"]
+)
+def test_unknown_runs_are_not_found(eval_client: TestClient, run_id: str) -> None:
+    assert eval_client.get(f"/evals/{run_id}").status_code == 404

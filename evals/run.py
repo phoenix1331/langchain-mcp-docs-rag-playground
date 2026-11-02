@@ -25,9 +25,9 @@ from app.models import chat_model
 from app.retrieval.search import Mode, Search
 from evals.langsmith_sync import publish
 from evals.questions import Question, load_questions
+from evals.results import RESULTS_DIR
 from evals.scoring import JUDGE_PROMPT, Judge, Judgement, make_judge, score, summarise
 
-RESULTS_DIR = Path(__file__).parent / "results"
 RETRY_SECONDS = 60.0
 MAX_RETRIES = 3
 
