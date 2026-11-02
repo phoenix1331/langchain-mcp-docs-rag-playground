@@ -13,7 +13,7 @@ from evals.run import (
     DailyQuotaExceeded,
     config_summary,
     format_summary,
-    is_rate_limit,
+    is_transient,
     main,
     run,
     run_question,
@@ -78,11 +78,12 @@ def no_sleep(seconds: float) -> None:
     [
         (RuntimeError("429 RESOURCE_EXHAUSTED"), True),
         (type("GoogleRateLimitError", (Exception,), {})("slow down"), True),
+        (RuntimeError("503 UNAVAILABLE. This model is currently experiencing high demand"), True),
         (ValueError("bad input"), False),
     ],
 )
-def test_is_rate_limit(exc: Exception, expected: bool) -> None:
-    assert is_rate_limit(exc) is expected
+def test_is_transient(exc: Exception, expected: bool) -> None:
+    assert is_transient(exc) is expected
 
 
 def test_with_retries_waits_then_succeeds() -> None:
@@ -98,7 +99,7 @@ def test_with_retries_waits_then_succeeds() -> None:
 
     assert with_retries(call, sleeps.append, logs.append) == "ok"
     assert sleeps == [60.0, 60.0]
-    assert logs[0] == "  rate limited; waiting 60s (retry 1)"
+    assert logs[0] == "  rate limited or overloaded; waiting 60s (retry 1)"
 
 
 def test_with_retries_gives_up_and_passes_other_errors() -> None:

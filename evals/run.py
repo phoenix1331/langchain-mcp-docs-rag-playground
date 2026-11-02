@@ -40,9 +40,13 @@ class DailyQuotaExceeded(RuntimeError):
     """A provider's daily quota is used up: waiting a minute will not help."""
 
 
-def is_rate_limit(exc: Exception) -> bool:
+TRANSIENT_MARKERS = ("RateLimit", "429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE")
+
+
+def is_transient(exc: Exception) -> bool:
+    """Rate limits (429) and overloaded models (503): worth waiting a minute and retrying."""
     text = f"{type(exc).__name__} {exc}"
-    return any(marker in text for marker in ("RateLimit", "429", "RESOURCE_EXHAUSTED"))
+    return any(marker in text for marker in TRANSIENT_MARKERS)
 
 
 def with_retries[T](
@@ -53,14 +57,14 @@ def with_retries[T](
         try:
             return call()
         except Exception as exc:
-            if not is_rate_limit(exc):
+            if not is_transient(exc):
                 raise
             if "PerDay" in str(exc):
                 raise DailyQuotaExceeded(str(exc)[:300]) from exc
             attempt += 1
             if attempt > MAX_RETRIES:
                 raise
-            log(f"  rate limited; waiting {RETRY_SECONDS:.0f}s (retry {attempt})")
+            log(f"  rate limited or overloaded; waiting {RETRY_SECONDS:.0f}s (retry {attempt})")
             sleep(RETRY_SECONDS)
 
 

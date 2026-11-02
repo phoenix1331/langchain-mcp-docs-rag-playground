@@ -1195,8 +1195,43 @@
       "expected": "answer",
       "spec_version": "all",
       "question": "Does MCP support JSON-RPC batching?",
-      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
-      "passed": false
+      "error": null,
+      "answer": "Support for JSON-RPC batching depends on the version of the MCP specification:\n\n*   **2025-03-26:** Yes, this version supports JSON-RPC batching [3]. Implementations **MAY** support sending batches, but **MUST** support receiving them [1]. When using the Streamable HTTP transport, the body of a POST request can be an array containing one or more requests, notifications, or responses [2]. Additionally, responses and server-sent requests or notifications within an SSE stream may be batched [5].\n*   **2025-06-18:** No, this version explicitly removed support for JSON-RPC batching [4].\n\nThe specification from 2024-11-05 does not mention batching; it only states that all messages must follow the JSON-RPC 2.0 specification [6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 6.1,
+      "tokens": 2297,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly confirms the addition of batching in the 2025-03-26 version and its removal in the 2025-06-18 version.",
+      "judge_tokens": 378,
+      "retrieved": [
+        "docs/specification/2025-03-26/basic/index.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/changelog.mdx",
+        "docs/specification/2025-06-18/changelog.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2024-11-05/basic/messages.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-03-26/basic/index.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-03-26/changelog.mdx",
+        "docs/specification/2025-06-18/changelog.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2024-11-05/basic/messages.mdx"
+      ],
+      "passed": true
     },
     {
       "id": "http-sse-replaced",
@@ -1204,8 +1239,40 @@
       "expected": "answer",
       "spec_version": "all",
       "question": "What replaced the HTTP with SSE transport, and when?",
-      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
-      "passed": false
+      "error": null,
+      "answer": "The **HTTP+SSE transport** was replaced by the **Streamable HTTP** transport [1].\n\nThis replacement was introduced in protocol version `2025-03-26` [1]. The HTTP+SSE transport (from version `2024-11-05`) has been deprecated since that time [2][3].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 2.7,
+      "tokens": 2168,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": false,
+      "judge_reason": "The answer explicitly confirms both the replacement of the transport mechanism and the specific date of the protocol version change.",
+      "judge_tokens": 239,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/deprecated.mdx",
+        "docs/specification/2026-07-28/changelog.mdx",
+        "docs/specification/2024-11-05/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/deprecated.mdx"
+      ],
+      "passed": true
     },
     {
       "id": "initialize-removed",
@@ -1213,7 +1280,42 @@
       "expected": "answer",
       "spec_version": "all",
       "question": "What happened to the initialize handshake in the latest spec?",
-      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+      "error": null,
+      "answer": "The `initialize` handshake remains a core part of the protocol for version negotiation and lifecycle management across all provided specifications [2][3][4][5].\n\nIn the latest specifications, the `initialize` handshake functions as follows:\n\n*   **Version Negotiation:** The client must send a supported protocol version in the `initialize` request, which should be the latest version it supports [2][3]. If the server supports that version, it must respond with the same version; otherwise, it must respond with a version it does support [2][3]. If the client does not support the version returned by the server, it should disconnect [2][3].\n*   **Request Restrictions:** The client should not send any requests other than `ping` before the server has responded to the `initialize` request [4][5]. Similarly, the server should not send requests other than `ping` and `logging` before it receives the `initialized` notification [4][5].\n*   **Extensions:** While the `extensions` field is not part of the published schemas for earlier versions, extensions can be negotiated during the `initialize` handshake using `params.capabilities.extensions` in the request and `result.capabilities.extensions` in the response [6]. \n\nRegarding the most recent specification (2026-07-28), the protocol maintains backward compatibility with earlier revisions that established a connection-scoped session via the `initialize` handshake [1]. Implementations detect the counterpart's era and fall back to appropriate compatibility modes [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 9.2,
+      "tokens": 1835,
+      "outcome": "answered",
+      "retrieval_hit": false,
+      "facts_found": [
+        false,
+        false
+      ],
+      "correctness": 0.0,
+      "citation_hit": false,
+      "judge_reason": "The answer explicitly contradicts the provided key facts by stating the initialize handshake remains a core part of the protocol.",
+      "judge_tokens": 493,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/transports/index.mdx",
+        "docs/specification/2025-03-26/basic/lifecycle.mdx",
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/specification/2025-11-25/basic/lifecycle.mdx",
+        "docs/specification/2025-03-26/basic/lifecycle.mdx",
+        "docs/extensions/overview.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/transports/index.mdx",
+        "docs/specification/2025-03-26/basic/lifecycle.mdx",
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/specification/2025-11-25/basic/lifecycle.mdx",
+        "docs/specification/2025-03-26/basic/lifecycle.mdx",
+        "docs/extensions/overview.mdx"
+      ],
       "passed": false
     },
     {
@@ -1257,20 +1359,464 @@
         "docs/specification/2025-11-25/basic/transports.mdx"
       ],
       "passed": true
+    },
+    {
+      "id": "tasks-moved-to-extension",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "How did tasks change between 2025-11-25 and 2026-07-28?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 12.9,
+      "tokens": 215,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": false,
+      "facts_found": [],
+      "correctness": 0.0,
+      "citation_hit": false,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": false
+    },
+    {
+      "id": "elicitation-history",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "When was elicitation introduced, and when was URL mode added?",
+      "error": null,
+      "answer": "URL mode elicitation was introduced in the `2025-11-25` version of the MCP specification [1][5].\n\nThe provided sources do not specify a separate introduction date for the general concept of elicitation, but they confirm that both `form` and `url` modes are documented as part of the `2025-11-25` specification [2][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 2.6,
+      "tokens": 2326,
+      "outcome": "answered",
+      "retrieval_hit": false,
+      "facts_found": [
+        false,
+        true
+      ],
+      "correctness": 0.5,
+      "citation_hit": false,
+      "judge_reason": "The answer correctly identifies the date for URL mode but fails to mention the date for the introduction of elicitation.",
+      "judge_tokens": 265,
+      "retrieved": [
+        "docs/specification/2025-11-25/client/elicitation.mdx",
+        "docs/specification/2025-11-25/client/elicitation.mdx",
+        "docs/specification/2025-11-25/schema.mdx",
+        "docs/specification/2025-11-25/schema.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-11-25/client/elicitation.mdx",
+        "docs/specification/2025-11-25/client/elicitation.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "resource-not-found-code-change",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "Did the error code for a missing resource change between versions?",
+      "error": null,
+      "answer": "Yes, the error code for a missing resource changed.\n\n*   **In versions 2024-11-05 through 2025-11-25:** The specification states that servers **SHOULD** return `-32002` when a resource is not found [3][4][5][6].\n*   **In version 2026-07-28:** The specification mandates that servers **MUST** return `-32602` (Invalid Params) for a non-existent resource [1]. \n\nWhile the 2026-07-28 specification reserves `-32002` and prohibits implementations of that version from emitting it, it specifies that clients **SHOULD** still accept `-32002` from servers implementing earlier versions for the sake of backwards compatibility [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 19.6,
+      "tokens": 1835,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly confirms both key facts regarding the change in error codes for missing resources.",
+      "judge_tokens": 355,
+      "retrieved": [
+        "docs/specification/2026-07-28/server/resources.mdx",
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2024-11-05/server/resources.mdx",
+        "docs/specification/2025-03-26/server/resources.mdx",
+        "docs/specification/2025-06-18/server/resources.mdx",
+        "docs/specification/2025-11-25/server/resources.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/server/resources.mdx",
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2024-11-05/server/resources.mdx",
+        "docs/specification/2025-03-26/server/resources.mdx",
+        "docs/specification/2025-06-18/server/resources.mdx",
+        "docs/specification/2025-11-25/server/resources.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "ping-removed",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "Is ping still part of MCP?",
+      "error": null,
+      "answer": "Yes, the `ping` mechanism is part of the Model Context Protocol [1][2][3][4].\n\nIt is an optional mechanism that allows either the client or the server to verify that the other party is responsive and the connection is alive [1][2][3][4]. The functionality is implemented using a request/response pattern where either party can initiate the check by sending a `ping` request [5][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 2.5,
+      "tokens": 888,
+      "outcome": "answered",
+      "retrieval_hit": false,
+      "facts_found": [
+        false,
+        false
+      ],
+      "correctness": 0.0,
+      "citation_hit": false,
+      "judge_reason": "The answer does not mention the historical existence of ping or its removal in 2026.",
+      "judge_tokens": 241,
+      "retrieved": [
+        "docs/specification/2025-06-18/basic/utilities/ping.mdx",
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx",
+        "docs/specification/2025-03-26/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx",
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-06-18/basic/utilities/ping.mdx",
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx",
+        "docs/specification/2025-03-26/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx",
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx"
+      ],
+      "passed": false
+    },
+    {
+      "id": "elicitation-absent-2024",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2024-11-05",
+      "question": "How does elicitation work?",
+      "error": null,
+      "answer": "The provided sources do not contain information regarding \"elicitation.\"\n\nThe sources do, however, cover the following topics related to the Model Context Protocol (version 2024-11-05):\n\n*   **Prompts:** These are user-controlled templates that require explicit invocation [1][4]. They are discovered via `prompts/list` and retrieved via `prompts/get` [4][5].\n*   **Sampling:** This allows servers to implement agentic behaviors by enabling LLM calls nested inside other server features [6]. The specification mandates that there should be a human in the loop to review these requests [6].\n*   **Tool Execution:** When a user asks a question, the client sends it to the LLM, which decides which tools to use; the client then executes those tools through the MCP server [3].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 4.7,
+      "tokens": 1565,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the provided sources do not contain information regarding elicitation.",
+      "judge_tokens": 319,
+      "retrieved": [
+        "docs/specification/2024-11-05/server/prompts.mdx",
+        "docs/docs/2024-11-05/learn/server-concepts.mdx",
+        "docs/docs/2024-11-05/develop/build-server.mdx",
+        "docs/docs/2024-11-05/learn/server-concepts.mdx",
+        "docs/specification/2024-11-05/server/prompts.mdx",
+        "docs/specification/2024-11-05/client/sampling.mdx"
+      ],
+      "cited": [
+        "docs/specification/2024-11-05/server/prompts.mdx",
+        "docs/docs/2024-11-05/develop/build-server.mdx",
+        "docs/docs/2024-11-05/learn/server-concepts.mdx",
+        "docs/specification/2024-11-05/server/prompts.mdx",
+        "docs/specification/2024-11-05/client/sampling.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "authorization-absent-2024",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2024-11-05",
+      "question": "How does authorization work in MCP?",
+      "error": null,
+      "answer": "Authorization in the Model Context Protocol (MCP) is an optional but recommended mechanism used to secure access to sensitive resources and operations [1][3]. The protocol does not mandate a single identity system, but instead follows the conventions of OAuth 2.1 [1][5].\n\n### How Authorization Works\nFor remotely-hosted MCP servers using HTTP-based transports, the authorization flow typically follows these steps:\n\n1.  **Initial Handshake**: When a client attempts to connect to a protected server, the server responds with a `401 Unauthorized` status [4]. This response includes a `WWW-Authenticate` header containing a `resource_metadata` parameter, which points the client to a Protected Resource Metadata (PRM) document [4].\n2.  **Metadata Discovery**: The client fetches the PRM document from the provided URI to learn about the authorization server, supported scopes, and other resource information [4].\n3.  **Token Validation**: Once the client completes the authorization flow, the MCP server validates the provided token and processes the request if the token is valid and possesses the required permissions [2].\n\n### Implementation Considerations\n*   **Optionality**: Authorization is optional for MCP servers, though it is strongly recommended for servers that handle user-specific data, require audit logs, or operate in enterprise environments [3].\n*   **Local vs. Remote**: While OAuth flows are designed for HTTP-based, remotely-hosted servers, local MCP servers using the `STDIO` transport have more flexibility [3]. These servers can use environment-based credentials or credentials provided by third-party libraries instead of in-browser OAuth flows [3].\n*   **Extensions**: Organizations can also utilize the `io.modelcontextprotocol/enterprise-managed-authorization` extension to manage access centrally through an existing identity provider [6].\n\n**Note on Specifications**: The provided sources for the 2024-11-05 version consist of guides regarding authorization; they do not contain the formal technical specification for authorization, which is referenced as being located at `/specification/2025-03-26/basic/authorization` [1][5].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.2,
+      "tokens": 2268,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the 2024-11-05 version does not contain the formal technical specification for authorization.",
+      "judge_tokens": 605,
+      "retrieved": [
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx"
+      ],
+      "cited": [
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "tasks-absent-2025-06",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2025-06-18",
+      "question": "How do I poll a long-running task for its result?",
+      "error": null,
+      "answer": "To poll for a long-running task's result, you use the `tasks/get` method [1][3].\n\nThe process involves the following steps:\n\n*   **Initiation:** When a server determines a request is long-running, it returns a `CreateTaskResult` (with `resultType: \"task\"`) containing a `taskId` [1][6].\n*   **Polling:** You call `tasks/get` using that `taskId` [1][3]. You should respect the `pollIntervalMs` value provided by the server when deciding how frequently to poll [2][6].\n*   **Handling Responses:** The response to `tasks/get` contains the current status of the task [1][6]. You must continue polling until the task reaches a terminal status, which are `completed`, `failed`, or `cancelled` [2][3].\n*   **Retrieving Results:** Once the status reaches `completed`, the `result` field in the response will contain the data that the original request would have returned synchronously [1][5]. If the status is `failed`, the `error` field will contain the JSON-RPC error [1][6].\n\n**Additional Considerations:**\n*   **Notifications:** If the server supports them, you can opt into `notifications/tasks` via the `subscriptions/listen` mechanism to receive status updates, which can eliminate the need for some `tasks/get` round-trips [4].\n*   **Persistence:** You should store `taskId` values durably so that you can resume polling if your client crashes or restarts [2][5].\n*   **Input Requirements:** If the task status is `input_required`, you must read the `inputRequests` map from the `tasks/get` response and submit the necessary responses using `tasks/update` before the task can proceed [1][2][3].\n\nThe provided sources are extensions and do not specify a version; therefore, these instructions apply to all versions of the protocol that support the Tasks extension.",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 5.5,
+      "tokens": 2526,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        false
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer does not mention the 2025-06-18 specification or its lack of task definitions.",
+      "judge_tokens": 581,
+      "retrieved": [
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx"
+      ],
+      "cited": [
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx"
+      ],
+      "passed": false
+    },
+    {
+      "id": "discover-absent-2025-11",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2025-11-25",
+      "question": "What does server/discover return?",
+      "error": null,
+      "answer": "The provided specification sources for version 2025-11-25 do not define a `server/discover` method or its return value.\n\nInformation regarding `server/discover` is found only in the unversioned Extension documentation [1]. According to that source, servers use the `server/discover` response to advertise extension support, returning a JSON object that includes:\n\n*   `supportedVersions`: An array of supported protocol versions [1].\n*   `capabilities`: An object detailing the server's capabilities, including `tools` and any supported `extensions` [1].\n*   `_meta`: Metadata about the server, such as its `name` and `version` [1].\n*   `ttlMs` and `cacheScope`: Information regarding caching [1].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 24.0,
+      "tokens": 1530,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the 2025-11-25 specification does not define the server/discover method.",
+      "judge_tokens": 310,
+      "retrieved": [
+        "docs/extensions/overview.mdx",
+        "docs/extensions/overview.mdx",
+        "docs/specification/2025-11-25/client/roots.mdx",
+        "docs/specification/2025-11-25/basic/authorization.mdx",
+        "docs/specification/2025-11-25/server/resources.mdx",
+        "docs/docs/2025-11-25/learn/server-concepts.mdx"
+      ],
+      "cited": [
+        "docs/extensions/overview.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "banana-bread",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "2026-07-28",
+      "question": "What's a good recipe for banana bread?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 2.2,
+      "tokens": 193,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "capital-of-france",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "all",
+      "question": "What is the capital of France?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 4.9,
+      "tokens": 187,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "python-sort",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "2026-07-28",
+      "question": "How do I sort a list of dictionaries by a key in Python?",
+      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+      "passed": false
+    },
+    {
+      "id": "kubernetes-pods",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "all",
+      "question": "What is a Kubernetes pod?",
+      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
+      "passed": false
+    },
+    {
+      "id": "greeting",
+      "category": "direct",
+      "expected": "direct",
+      "spec_version": "2026-07-28",
+      "question": "Hi there!",
+      "error": null,
+      "answer": "Hello! I'm here to help you navigate the Model Context Protocol documentation, including the specification, SDKs, and tools like the Inspector. Feel free to ask me anything about MCP, and I'll provide answers with citations from the official docs!",
+      "steps": [
+        "route",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 26.8,
+      "tokens": 316,
+      "outcome": "direct",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "what-can-you-do",
+      "category": "direct",
+      "expected": "direct",
+      "spec_version": "2026-07-28",
+      "question": "What can you help me with?",
+      "error": null,
+      "answer": "I can help you navigate the Model Context Protocol documentation, including the specification, implementation guides, SDKs, and the Inspector tool. Feel free to ask me any questions about these resources, and I will provide answers with citations from the relevant sections of the documentation.",
+      "steps": [
+        "route",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 1.6,
+      "tokens": 335,
+      "outcome": "direct",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
     }
   ],
-  "complete": false,
+  "complete": true,
   "summary": {
-    "questions": 32,
-    "errors": 3,
-    "pass_rate": 0.966,
-    "retrieval_hit_rate": 0.931,
-    "correctness": 0.914,
-    "citation_accuracy": 0.931,
-    "correct_declines": null,
-    "false_declines": 1,
-    "direct_correct": null,
-    "mean_seconds": 18.1,
-    "total_tokens": 71157
+    "questions": 46,
+    "errors": 2,
+    "pass_rate": 0.886,
+    "retrieval_hit_rate": 0.833,
+    "correctness": 0.833,
+    "citation_accuracy": 0.806,
+    "correct_declines": 0.833,
+    "false_declines": 2,
+    "direct_correct": 1.0,
+    "mean_seconds": 15.0,
+    "total_tokens": 95427
   }
 }
