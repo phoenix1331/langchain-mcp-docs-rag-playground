@@ -278,15 +278,6 @@
       "passed": true
     },
     {
-      "id": "stdio-framing",
-      "category": "version_specific",
-      "expected": "answer",
-      "spec_version": "2026-07-28",
-      "question": "How are messages framed on the stdio transport, and what can the server write to stderr?",
-      "error": "GoogleAPIError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}",
-      "passed": false
-    },
-    {
       "id": "streamable-http-headers",
       "category": "version_specific",
       "expected": "answer",
@@ -1494,20 +1485,101 @@
         "docs/specification/2025-11-25/schema.mdx"
       ],
       "passed": false
+    },
+    {
+      "id": "stdio-framing",
+      "category": "version_specific",
+      "expected": "answer",
+      "spec_version": "2026-07-28",
+      "question": "How are messages framed on the stdio transport, and what can the server write to stderr?",
+      "error": null,
+      "answer": "In the `stdio` transport for spec version 2026-07-28, messages are framed as single JSON-RPC requests, notifications, or responses per line, delimited by newlines [1]. These messages **MUST NOT** contain embedded newlines [1].\n\nRegarding `stderr`, the server **MAY** write UTF-8 strings to `stderr` for logging purposes, including informational, debug, and error messages [1]. \n\nAdditional details regarding `stderr` include:\n*   The client **MAY** capture, forward, or ignore the server's `stderr` output and **SHOULD NOT** assume that output to `stderr` indicates an error condition [1].\n*   When using the `stdio` transport, messages logged to `stderr` are automatically captured by the host application [2].\n*   Servers should avoid logging to `stdout`, as this interferes with protocol operations [2].\n*   For servers using the `Streamable HTTP` transport, `stderr` is not captured by the client [2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 5.6,
+      "tokens": 2294,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        false,
+        true,
+        true
+      ],
+      "correctness": 0.6666666666666666,
+      "citation_hit": true,
+      "judge_reason": "The answer correctly identifies the newline framing and stderr logging rules, but it does not explicitly state that the server reads from stdin and writes to stdout.",
+      "judge_tokens": 421,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
+        "docs/docs/2026-07-28/tools/debugging.mdx",
+        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
+        "docs/docs/2026-07-28/develop/build-server.mdx",
+        "docs/docs/2026-07-28/develop/build-server.mdx",
+        "docs/docs/2026-07-28/tools/inspector/web.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
+        "docs/docs/2026-07-28/tools/debugging.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "elicitation-absent-2024",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2024-11-05",
+      "question": "How does elicitation work?",
+      "error": null,
+      "answer": "Elicitation is handled through the `tasks` extension, which allows a server to request input from a client mid-flight [1][2].\n\nWhen a task requires input, the following process occurs:\n\n*   **Status Change:** The task moves to the `input_required` state [1][2].\n*   **Request Surface:** When the client calls `tasks/get` to poll for the task status, the response includes an `inputRequests` map [1]. This map contains the specific elicitations or other requests the server needs the client to fulfill [1].\n*   **Client Response:** The client fulfills these requests by calling `tasks/update` [1][2].\n\nThis mechanism allows for mid-flight interaction without requiring a second connection or unsolicited server-to-client messages [2].\n\nPlease note that while the `tasks` extension describes this elicitation process, the 2024-11-05 specification sources provided do not explicitly define the `tasks` extension; it is described in the unversioned \"Extension\" sources [1][2]. Additionally, the 2024-11-05 specification sources describe a separate \"Sampling\" feature that involves human-in-the-loop review via `sampling/createMessage`, where a client presents a request to a user for approval before forwarding it to an LLM [6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 6.3,
+      "tokens": 1956,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the 2024-11-05 specification does not define the tasks extension or the elicitation process.",
+      "judge_tokens": 443,
+      "retrieved": [
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/docs/2024-11-05/develop/build-server.mdx",
+        "docs/docs/2024-11-05/develop/build-client.mdx",
+        "docs/docs/2024-11-05/develop/build-client.mdx",
+        "docs/specification/2024-11-05/client/sampling.mdx"
+      ],
+      "cited": [
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/specification/2024-11-05/client/sampling.mdx"
+      ],
+      "passed": true
     }
   ],
   "complete": false,
   "summary": {
-    "questions": 36,
-    "errors": 1,
-    "pass_rate": 0.914,
-    "retrieval_hit_rate": 0.886,
-    "correctness": 0.833,
-    "citation_accuracy": 0.886,
-    "correct_declines": null,
+    "questions": 37,
+    "errors": 0,
+    "pass_rate": 0.919,
+    "retrieval_hit_rate": 0.889,
+    "correctness": 0.829,
+    "citation_accuracy": 0.889,
+    "correct_declines": 1.0,
     "false_declines": 2,
     "direct_correct": null,
-    "mean_seconds": 17.4,
-    "total_tokens": 91398
+    "mean_seconds": 16.7,
+    "total_tokens": 96512
   }
 }
