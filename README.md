@@ -1,4 +1,20 @@
+<p align="center">
+  <img src="docs/screenshots/LangChain_Lockup_LightBlue.png" alt="LangChain" width="320">
+</p>
+
 # MCP Docs RAG Playground
+
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)
+![LangChain 1.4](https://img.shields.io/badge/LangChain-1.4-1C3C3C?logo=langchain&logoColor=white)
+![LangGraph 1.2](https://img.shields.io/badge/LangGraph-1.2-1C3C3C?logo=langchain&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.162-009688?logo=fastapi&logoColor=white)
+![HTMX](https://img.shields.io/badge/HTMX-2.0-3366CC?logo=htmx&logoColor=white)
+![Postgres + pgvector](https://img.shields.io/badge/Postgres-pgvector-4169E1?logo=postgresql&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-Flash--Lite-8E75B2?logo=googlegemini&logoColor=white)
+![Voyage AI](https://img.shields.io/badge/Voyage_AI-embeddings_%2B_rerank-5A4FCF)
+![Coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen?logo=pytest&logoColor=white)
+![Ruff](https://img.shields.io/badge/code_style-ruff-D7FF64?logo=ruff&logoColor=black)
+![uv](https://img.shields.io/badge/managed_with-uv-DE5FE9)
 
 Ask questions about the Model Context Protocol (MCP) specification and get answers tied to the spec release you choose, cited back to the exact sections, from an agentic RAG pipeline built with LangChain and LangGraph.
 

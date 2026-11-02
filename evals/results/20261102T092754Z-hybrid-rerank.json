@@ -1566,20 +1566,226 @@
         "docs/specification/2024-11-05/client/sampling.mdx"
       ],
       "passed": true
+    },
+    {
+      "id": "authorization-absent-2024",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2024-11-05",
+      "question": "How does authorization work in MCP?",
+      "error": null,
+      "answer": "In the Model Context Protocol (MCP) version 2024-11-05, authorization is an optional but recommended mechanism used to secure access to sensitive resources and operations [1][6].\n\nThe provided documentation for this version consists of **Guides**; it does not contain the formal **Specification** text defining the protocol's requirements for authorization [1][2][3][4][6].\n\n### Authorization Overview\nMCP uses standardized flows based on [OAuth 2.1](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13) to build trust between clients and servers [1]. While OAuth flows are designed for HTTP-based, remotely-hosted servers, local MCP servers using the `STDIO` transport may alternatively use environment-based credentials or third-party libraries [6].\n\n### The Authorization Flow\nFor HTTP-based servers, the authorization process generally follows these steps:\n\n1.  **Initial Handshake:** When a client attempts to connect, the server returns a `401 Unauthorized` response. This response includes a `WWW-Authenticate` header containing a `resource_metadata` parameter, which points the client to a Protected Resource Metadata (PRM) document [2].\n2.  **Metadata Discovery:** The client fetches the PRM document to learn about the authorization server, supported scopes, and resource information [2].\n3.  **User Authorization:** The client directs the user to an `/authorize` endpoint to log in and grant permissions. Upon success, the client receives an authorization code, which it exchanges for an `access_token` and `refresh_token` using standard OAuth 2.1 authorization code with PKCE conventions [3].\n4.  **Authenticated Requests:** The client includes the `access_token` in the `Authorization` header of subsequent requests to the MCP server [3]. The server then validates the token and checks for the required permissions before processing the request [4].\n\n### When to Use Authorization\nAuthorization is recommended when your server [6]:\n*   Accesses user-specific data (e.g., emails, databases).\n*   Requires auditing of actions.\n*   Grants access to APIs requiring user consent.\n*   Operates in enterprise environments with strict access controls.\n*   Requires per-user rate limiting or usage tracking.\n\nAdditionally, the protocol supports an optional **Enterprise-Managed Authorization** extension, which allows an organization's Identity Provider (IdP) to act as the authoritative decision-maker for access, rather than relying on individual user-driven authorization [5].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.3,
+      "tokens": 2538,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the provided documentation consists of guides and does not contain the formal specification text defining authorization requirements.",
+      "judge_tokens": 703,
+      "retrieved": [
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx"
+      ],
+      "cited": [
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx",
+        "docs/extensions/auth/enterprise-managed-authorization.mdx",
+        "docs/docs/2024-11-05/tutorials/security/authorization.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "tasks-absent-2025-06",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2025-06-18",
+      "question": "How do I poll a long-running task for its result?",
+      "error": null,
+      "answer": "To poll for the result of a long-running task in the Model Context Protocol, you use the `tasks/get` method [1].\n\nThe process for polling is as follows:\n\n1.  **Initiation:** When a server determines a request will be long-running, it returns a `CreateTaskResult` (with `resultType: \"task\"`) containing a `taskId` [1][3].\n2.  **Polling:** The client calls `tasks/get` using the `taskId` [1]. You should respect the `pollIntervalMs` value provided by the server when determining how frequently to poll [2][3].\n3.  **Status Updates:** The server responds to each `tasks/get` call with the current status of the task [1][3].\n4.  **Completion:** Continue polling until the task reaches a terminal status, which includes `completed`, `failed`, or `cancelled` [2].\n    *   If the status is `completed`, the `result` field will contain the final output [1][3].\n    *   If the status is `failed`, the `error` field will contain the JSON-RPC error [1][3].\n\n**Important Considerations:**\n*   **Capability Negotiation:** Before you can use tasks, both the client and server must advertise support for the `io.modelcontextprotocol/tasks` extension in their respective capabilities [1][2][3].\n*   **Persistence:** You should store `taskId` values durably so that polling can resume if the client crashes or restarts [2].\n*   **Mid-flight Input:** If the task status is `input_required`, you must read the `inputRequests` map from the `tasks/get` response and submit the necessary responses via `tasks/update` before the task can proceed [1][2].\n\n*Note: The provided specification sources for version 2025-06-18 do not mention the Tasks extension; the information above is derived from the provided Extension sources, which apply to the protocol generally [1][2][3][4][5].*",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 5.5,
+      "tokens": 2663,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the 2025-06-18 specification does not mention the Tasks extension.",
+      "judge_tokens": 589,
+      "retrieved": [
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/specification/2025-06-18/basic/utilities/progress.mdx"
+      ],
+      "cited": [
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "discover-absent-2025-11",
+      "category": "absent_in_version",
+      "expected": "not_covered",
+      "spec_version": "2025-11-25",
+      "question": "What does server/discover return?",
+      "error": null,
+      "answer": "For the `2025-11-25` specification version, the provided sources do not define the full structure of the `server/discover` response.\n\nHowever, the unversioned extension documentation provides the following details regarding `server/discover`:\n\n*   **General Purpose:** Servers use `server/discover` to advertise their capabilities and supported protocol versions [1][2][3][4].\n*   **Structure:** The response includes a `capabilities` object [1][2][5]. When extensions are supported, they are advertised within an `extensions` field inside those `capabilities` [1][2][3][4][5].\n*   **Version Advertisement:** Servers advertise their supported protocol versions in a `supportedVersions` array [1].\n*   **Metadata:** The response may include an `_meta` field containing `io.modelcontextprotocol/serverInfo`, which provides the server's `name` and `version` [1].\n*   **Additional Fields:** The response can include `ttlMs` and `cacheScope` [1].\n\nWhile source [6] confirms that `2025-11-25` is a valid specification version, it only provides information regarding the `resources/list` request and response, not `server/discover`.",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 4.7,
+      "tokens": 2151,
+      "outcome": "answered",
+      "retrieval_hit": null,
+      "facts_found": [
+        true
+      ],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "The answer explicitly states that the 2025-11-25 specification version does not define the structure of the server/discover response.",
+      "judge_tokens": 430,
+      "retrieved": [
+        "docs/extensions/overview.mdx",
+        "docs/extensions/skills/overview.mdx",
+        "docs/extensions/auth/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/specification/2025-11-25/server/resources.mdx"
+      ],
+      "cited": [
+        "docs/extensions/overview.mdx",
+        "docs/extensions/skills/overview.mdx",
+        "docs/extensions/auth/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/extensions/tasks/overview.mdx",
+        "docs/specification/2025-11-25/server/resources.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "banana-bread",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "2026-07-28",
+      "question": "What's a good recipe for banana bread?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 6.0,
+      "tokens": 193,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "capital-of-france",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "all",
+      "question": "What is the capital of France?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 1.5,
+      "tokens": 187,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
+    },
+    {
+      "id": "python-sort",
+      "category": "out_of_scope",
+      "expected": "decline",
+      "spec_version": "2026-07-28",
+      "question": "How do I sort a list of dictionaries by a key in Python?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 3.4,
+      "tokens": 196,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": null,
+      "facts_found": [],
+      "correctness": null,
+      "citation_hit": null,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": true
     }
   ],
   "complete": false,
   "summary": {
-    "questions": 37,
+    "questions": 43,
     "errors": 0,
-    "pass_rate": 0.919,
+    "pass_rate": 0.93,
     "retrieval_hit_rate": 0.889,
     "correctness": 0.829,
     "citation_accuracy": 0.889,
     "correct_declines": 1.0,
     "false_declines": 2,
     "direct_correct": null,
-    "mean_seconds": 16.7,
-    "total_tokens": 96512
+    "mean_seconds": 15.1,
+    "total_tokens": 106162
   }
 }
