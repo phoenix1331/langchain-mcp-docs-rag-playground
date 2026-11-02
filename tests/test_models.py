@@ -6,7 +6,15 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_voyageai import VoyageAIEmbeddings
 
 from app import models
-from app.models import ModelConfigError, chat_model, embeddings, parse_spec, reranker, slug
+from app.models import (
+    REQUEST_TIMEOUT_SECONDS,
+    ModelConfigError,
+    chat_model,
+    embeddings,
+    parse_spec,
+    reranker,
+    slug,
+)
 from app.retrieval.rerank import VoyageReranker
 
 
@@ -38,6 +46,7 @@ def test_chat_model_goes_through_init_chat_model() -> None:
     assert isinstance(llm, ChatGoogleGenerativeAI)
     assert llm.model.endswith("gemini-test")
     assert llm.temperature == 0
+    assert llm.timeout == REQUEST_TIMEOUT_SECONDS
 
 
 def test_voyage_embeddings_get_the_configured_size() -> None:

@@ -48,10 +48,17 @@ def slug(spec: str) -> str:
 warnings.filterwarnings("ignore", message=r".*uses fixed sampling defaults.*", category=UserWarning)
 
 
+REQUEST_TIMEOUT_SECONDS = 120
+
+
 def chat_model(spec: str) -> BaseChatModel:
-    """Temperature 0 where the provider supports it, so eval runs stay comparable."""
+    """Temperature 0 where the provider supports it, so eval runs stay comparable.
+
+    A request timeout stops a dropped connection from hanging a question (or an eval run)
+    forever; the caller's retry handling takes over instead.
+    """
     parse_spec(spec)
-    return init_chat_model(spec, temperature=0)
+    return init_chat_model(spec, temperature=0, timeout=REQUEST_TIMEOUT_SECONDS)
 
 
 def embeddings(spec: str, dimensions: int) -> Embeddings:

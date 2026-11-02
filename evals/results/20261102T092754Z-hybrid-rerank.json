@@ -1209,20 +1209,305 @@
         "docs/specification/2025-03-26/basic/transports.mdx"
       ],
       "passed": true
+    },
+    {
+      "id": "http-sse-replaced",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "What replaced the HTTP with SSE transport, and when?",
+      "error": null,
+      "answer": "The **Streamable HTTP** transport replaced the HTTP+SSE transport [1][2][3][4][6].\n\nThis replacement was introduced in protocol version **2025-03-26** [4][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 4.4,
+      "tokens": 2351,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly confirms both the replacement of the transport mechanism and the specific date of the protocol version change.",
+      "judge_tokens": 214,
+      "retrieved": [
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-06-18/basic/transports.mdx",
+        "docs/specification/2025-11-25/basic/transports.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2025-03-26/changelog.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-06-18/basic/transports.mdx",
+        "docs/specification/2025-11-25/basic/transports.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2025-03-26/changelog.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "initialize-removed",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "What happened to the initialize handshake in the latest spec?",
+      "error": null,
+      "answer": "In the latest specification (2026-07-28), the `initialize` handshake is considered a legacy mechanism [1][2]. \n\nModern MCP versions have moved toward a per-request-metadata model [2]. The current approach for handling versioning and initialization is as follows:\n\n*   **Probing:** Clients that support both modern and legacy versions are recommended to probe the server using `server/discover` before sending any other requests [2]. \n*   **Legacy Fallback:** If a server does not respond to the `server/discover` probe or returns an error, the client should fall back to the `initialize` handshake [2].\n*   **Legacy Semantics:** In older protocol revisions (such as 2025-03-26 and 2024-11-05), the `initialize` request was the mandatory first interaction required to establish protocol version compatibility, exchange capabilities, and share implementation details [3][4][6].\n\nWhile the `initialize` handshake is no longer the primary modern mechanism, it remains part of the protocol's backward compatibility strategy to ensure interoperability with legacy servers [1][2].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 6.9,
+      "tokens": 2039,
+      "outcome": "answered",
+      "retrieval_hit": false,
+      "facts_found": [
+        false,
+        true
+      ],
+      "correctness": 0.5,
+      "citation_hit": false,
+      "judge_reason": "The answer describes the handshake as legacy rather than stating it was removed to make the protocol stateless, but it correctly identifies that versioning and capabilities are now handled via request metadata.",
+      "judge_tokens": 437,
+      "retrieved": [
+        "docs/specification/2026-07-28/basic/transports/index.mdx",
+        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
+        "docs/specification/2025-03-26/basic/lifecycle.mdx",
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/extensions/overview.mdx",
+        "docs/specification/2025-03-26/basic/lifecycle.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/basic/transports/index.mdx",
+        "docs/specification/2026-07-28/basic/transports/stdio.mdx",
+        "docs/specification/2025-03-26/basic/lifecycle.mdx",
+        "docs/specification/2024-11-05/basic/lifecycle.mdx",
+        "docs/specification/2025-03-26/basic/lifecycle.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "sessions-removed",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "Is the Mcp-Session-Id header still part of the Streamable HTTP transport?",
+      "error": null,
+      "answer": "No, the `Mcp-Session-Id` header is not part of the current Streamable HTTP transport [4].\n\nAs of the 2026-07-28 specification, protocol-level sessions and the `Mcp-Session-Id` header have been removed to make the protocol stateless [4]. Servers that require cross-call state now use explicit, server-minted handles passed as ordinary tool arguments [4].\n\nFor context regarding earlier versions:\n*   **Versions 2025-03-26 through 2025-11-25:** These versions utilized the `Mcp-Session-Id` header (or `MCP-Session-Id` in the 2025-11-25 version) for session management [1][2][3][5].\n*   **Backward Compatibility:** If a server supporting the current (2026-07-28) revision receives a request containing an `Mcp-Session-Id` header, it should ignore the header and not mint or echo session IDs [5].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 20.7,
+      "tokens": 2748,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly confirms both the introduction date of the header and its removal in the 2026-07-28 specification.",
+      "judge_tokens": 437,
+      "retrieved": [
+        "docs/specification/2025-06-18/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-11-25/basic/transports.mdx",
+        "docs/specification/2026-07-28/changelog.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-06-18/basic/transports.mdx",
+        "docs/specification/2025-03-26/basic/transports.mdx",
+        "docs/specification/2025-11-25/basic/transports.mdx",
+        "docs/specification/2026-07-28/changelog.mdx",
+        "docs/specification/2026-07-28/basic/transports/streamable-http.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "tasks-moved-to-extension",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "How did tasks change between 2025-11-25 and 2026-07-28?",
+      "error": null,
+      "answer": "That is outside what I can help with: I only answer questions about the Model Context Protocol, from its documentation at modelcontextprotocol.io.",
+      "steps": [
+        "route",
+        "decline"
+      ],
+      "model_calls": 1,
+      "seconds": 2.5,
+      "tokens": 215,
+      "outcome": "declined_out_of_scope",
+      "retrieval_hit": false,
+      "facts_found": [],
+      "correctness": 0.0,
+      "citation_hit": false,
+      "judge_reason": "",
+      "judge_tokens": 0,
+      "retrieved": [],
+      "cited": [],
+      "passed": false
+    },
+    {
+      "id": "elicitation-history",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "When was elicitation introduced, and when was URL mode added?",
+      "error": null,
+      "answer": "URL mode elicitation was introduced in the `2025-11-25` version of the MCP specification [1][2][3].\n\nThe provided sources do not specify a separate introduction date for the general concept of elicitation, but they confirm that `elicitation/create` requests and the `mode` parameter (supporting both `form` and `url` types) were present in the `2025-11-25` specification [3][5].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 7.4,
+      "tokens": 2432,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        false,
+        true
+      ],
+      "correctness": 0.5,
+      "citation_hit": true,
+      "judge_reason": "The answer correctly identifies the date for URL mode but fails to state the date for the introduction of elicitation.",
+      "judge_tokens": 281,
+      "retrieved": [
+        "docs/specification/2025-11-25/client/elicitation.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/specification/2025-11-25/changelog.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/specification/2025-11-25/client/elicitation.mdx",
+        "docs/specification/2025-11-25/client/elicitation.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-11-25/client/elicitation.mdx",
+        "docs/specification/2026-07-28/client/elicitation.mdx",
+        "docs/specification/2025-11-25/changelog.mdx",
+        "docs/specification/2025-11-25/client/elicitation.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "resource-not-found-code-change",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "Did the error code for a missing resource change between versions?",
+      "error": null,
+      "answer": "Yes, the error code for a missing resource changed.\n\nIn versions dated 2025-11-25 and earlier, the specification recommended using `-32002` for a resource not found [3][4][5][6].\n\nIn the 2026-07-28 specification, this was changed to `-32602` (Invalid Params) to align with the JSON-RPC specification [1][2][3]. Implementations of the 2026-07-28 version must not emit the old `-32002` code, though clients should still accept it from servers using earlier versions for backwards compatibility [1][3].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 23.2,
+      "tokens": 2061,
+      "outcome": "answered",
+      "retrieval_hit": true,
+      "facts_found": [
+        true,
+        true
+      ],
+      "correctness": 1.0,
+      "citation_hit": true,
+      "judge_reason": "The answer explicitly confirms both the original error code and the specific change to the new code in the later version.",
+      "judge_tokens": 312,
+      "retrieved": [
+        "docs/specification/2026-07-28/server/resources.mdx",
+        "docs/specification/2026-07-28/changelog.mdx",
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2025-03-26/server/resources.mdx",
+        "docs/specification/2024-11-05/server/resources.mdx",
+        "docs/specification/2025-06-18/server/resources.mdx"
+      ],
+      "cited": [
+        "docs/specification/2026-07-28/server/resources.mdx",
+        "docs/specification/2026-07-28/changelog.mdx",
+        "docs/specification/2026-07-28/basic/index.mdx",
+        "docs/specification/2025-03-26/server/resources.mdx",
+        "docs/specification/2024-11-05/server/resources.mdx",
+        "docs/specification/2025-06-18/server/resources.mdx"
+      ],
+      "passed": true
+    },
+    {
+      "id": "ping-removed",
+      "category": "cross_version",
+      "expected": "answer",
+      "spec_version": "all",
+      "question": "Is ping still part of MCP?",
+      "error": null,
+      "answer": "Yes, the `ping` mechanism is part of the Model Context Protocol [1][2][3][4]. It is an optional mechanism that allows either the client or the server to verify that the other party is responsive and the connection is alive [1][2][3][4].\n\nThe specification requires that the receiver of a `ping` must respond promptly, or they may be disconnected [5][6].",
+      "steps": [
+        "route",
+        "retrieve",
+        "answer"
+      ],
+      "model_calls": 2,
+      "seconds": 5.2,
+      "tokens": 1237,
+      "outcome": "answered",
+      "retrieval_hit": false,
+      "facts_found": [
+        false,
+        false
+      ],
+      "correctness": 0.0,
+      "citation_hit": false,
+      "judge_reason": "The answer does not mention the historical existence of ping or its removal in 2026.",
+      "judge_tokens": 237,
+      "retrieved": [
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx",
+        "docs/specification/2025-03-26/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx",
+        "docs/specification/2025-06-18/basic/utilities/ping.mdx",
+        "docs/specification/2025-06-18/schema.mdx",
+        "docs/specification/2025-11-25/schema.mdx"
+      ],
+      "cited": [
+        "docs/specification/2025-11-25/basic/utilities/ping.mdx",
+        "docs/specification/2025-03-26/basic/utilities/ping.mdx",
+        "docs/specification/2024-11-05/basic/utilities/ping.mdx",
+        "docs/specification/2025-06-18/basic/utilities/ping.mdx",
+        "docs/specification/2025-06-18/schema.mdx",
+        "docs/specification/2025-11-25/schema.mdx"
+      ],
+      "passed": false
     }
   ],
   "complete": false,
   "summary": {
-    "questions": 29,
+    "questions": 36,
     "errors": 1,
-    "pass_rate": 0.964,
-    "retrieval_hit_rate": 0.964,
-    "correctness": 0.899,
-    "citation_accuracy": 0.964,
+    "pass_rate": 0.914,
+    "retrieval_hit_rate": 0.886,
+    "correctness": 0.833,
+    "citation_accuracy": 0.886,
     "correct_declines": null,
-    "false_declines": 1,
+    "false_declines": 2,
     "direct_correct": null,
-    "mean_seconds": 19.2,
-    "total_tokens": 76397
+    "mean_seconds": 17.4,
+    "total_tokens": 91398
   }
 }
